@@ -1,4 +1,7 @@
 
+
 # Escala Pro
-# Tela Principal
-<img width="1600" height="844" alt="WhatsApp Image 2026-08-20 at 13 05 28" src="https://github.com/user-attachments/assets/4a5dac18-46b6-4d89-9ad5-db695bbc6af5" />
+<img width="1024" height="1024" alt="Logo-EscalaPro" src="https://github.com/user-attachments/assets/19a0e429-1742-4923-8a81-c85c39e138d0" />
+
+# Menu
+<img width="225" height="542" alt="tela menu" src="https://github.com/user-attachments/assets/2ad03cea-f403-4e93-8b04-801b05922f13" />
