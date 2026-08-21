@@ -11,8 +11,13 @@ import {
   DashboardOutlined,
   EventNoteOutlined,
   GroupOutlined,
+   
   SettingsOutlined,
 } from "@mui/icons-material";
+import PianoOutlined from '@mui/icons-material/PianoOutlined';
+import LibraryMusicIcon from '@mui/icons-material/LibraryMusic';
+ 
+import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -37,6 +42,12 @@ export default function Sidebar() {
       icon: <GroupOutlined />,
       profiles: ["ADMIN"],
     },
+    {
+      label: "Instrumentos",
+      path: "/instrumentos",
+      icon: <PianoOutlined  />,
+      profiles: ["ADMIN"],
+    },
 
     {
       label: "Usuários",
@@ -44,11 +55,23 @@ export default function Sidebar() {
       icon: <GroupOutlined />,
       profiles: ["ADMIN", "LIDER"],
     },
+        {
+      label: "Agenda Mensal",
+      path: "/agenda-mensal",
+      icon: <CalendarMonthOutlinedIcon />,
+      profiles: ["ADMIN", "LIDER"],
+    },
 
     {
       label: "Escalas",
       path: "/escalas",
       icon: <EventNoteOutlined />,
+      profiles: ["ADMIN", "LIDER"],
+    },
+    {
+      label: "Músicas",
+      path: "/musicas",
+      icon: <LibraryMusicIcon />,
       profiles: ["ADMIN", "LIDER"],
     },
 

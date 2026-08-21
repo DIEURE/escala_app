@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
   Alert,
   Box,
@@ -8,47 +8,47 @@ import {
   Paper,
   Stack,
   Typography,
-} from '@mui/material';
-import CheckCircle from '@mui/icons-material/CheckCircle';
-import EventNoteOutlined from '@mui/icons-material/EventNoteOutlined';
-import PageHeader from '../../../components/common/PageHeader';
+} from "@mui/material";
+import CheckCircle from "@mui/icons-material/CheckCircle";
+import EventNoteOutlined from "@mui/icons-material/EventNoteOutlined";
+import PageHeader from "../../../components/common/PageHeader";
 import {
   buscarMinhasEscalas,
   confirmarMinhaEscala,
-} from '../../../services/escalaService';
+} from "../../../services/escalaService";
 
 function getStatus(escala) {
   if (escala.substituido) {
     return {
-      label: 'Substituída',
-      color: 'error',
+      label: "Substituída",
+      color: "error",
     };
   }
 
   if (escala.confirmado) {
     return {
-      label: 'Confirmada',
-      color: 'success',
+      label: "Confirmada",
+      color: "success",
     };
   }
 
   return {
-    label: 'Aguardando confirmação',
-    color: 'warning',
+    label: "Aguardando confirmação",
+    color: "warning",
   };
 }
 
 export default function MinhasEscalasPage() {
   const [escalas, setEscalas] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [erro, setErro] = useState('');
-  const [sucesso, setSucesso] = useState('');
+  const [erro, setErro] = useState("");
+  const [sucesso, setSucesso] = useState("");
   const [confirmandoId, setConfirmandoId] = useState(null);
 
   async function carregarEscalas() {
     try {
       setLoading(true);
-      setErro('');
+      setErro("");
 
       const dados = await buscarMinhasEscalas();
       setEscalas(dados);
@@ -57,7 +57,7 @@ export default function MinhasEscalasPage() {
 
       setErro(
         error.response?.data?.message ||
-          'Não foi possível carregar suas escalas.'
+          "Não foi possível carregar suas escalas.",
       );
     } finally {
       setLoading(false);
@@ -71,24 +71,24 @@ export default function MinhasEscalasPage() {
   async function handleConfirmar(escalaId) {
     try {
       setConfirmandoId(escalaId);
-      setErro('');
-      setSucesso('');
+      setErro("");
+      setSucesso("");
 
       const escalaAtualizada = await confirmarMinhaEscala(escalaId, true);
 
       setEscalas((listaAtual) =>
         listaAtual.map((escala) =>
-          escala.id === escalaId ? escalaAtualizada : escala
-        )
+          escala.id === escalaId ? escalaAtualizada : escala,
+        ),
       );
 
-      setSucesso('Sua participação foi confirmada com sucesso.');
+      setSucesso("Sua participação foi confirmada com sucesso.");
     } catch (error) {
       console.error(error);
 
       setErro(
         error.response?.data?.message ||
-          'Não foi possível confirmar esta escala.'
+          "Não foi possível confirmar esta escala.",
       );
     } finally {
       setConfirmandoId(null);
@@ -119,10 +119,10 @@ export default function MinhasEscalasPage() {
           elevation={0}
           sx={{
             minHeight: 250,
-            display: 'grid',
-            placeItems: 'center',
-            border: '1px solid',
-            borderColor: 'divider',
+            display: "grid",
+            placeItems: "center",
+            border: "1px solid",
+            borderColor: "divider",
             borderRadius: 3,
           }}
         >
@@ -134,11 +134,11 @@ export default function MinhasEscalasPage() {
           sx={{
             minHeight: 300,
             p: 4,
-            display: 'grid',
-            placeItems: 'center',
-            textAlign: 'center',
-            border: '1px solid',
-            borderColor: 'divider',
+            display: "grid",
+            placeItems: "center",
+            textAlign: "center",
+            border: "1px solid",
+            borderColor: "divider",
             borderRadius: 3,
           }}
         >
@@ -147,7 +147,7 @@ export default function MinhasEscalasPage() {
               sx={{
                 mb: 2,
                 fontSize: 44,
-                color: 'text.secondary',
+                color: "text.secondary",
               }}
             />
 
@@ -172,23 +172,23 @@ export default function MinhasEscalasPage() {
                 elevation={0}
                 sx={{
                   p: { xs: 2, sm: 3 },
-                  border: '1px solid',
-                  borderColor: 'divider',
+                  border: "1px solid",
+                  borderColor: "divider",
                   borderRadius: 3,
                 }}
               >
                 <Box
                   sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: { xs: 'flex-start', sm: 'center' },
-                    flexDirection: { xs: 'column', sm: 'row' },
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: { xs: "flex-start", sm: "center" },
+                    flexDirection: { xs: "column", sm: "row" },
                     gap: 2,
                   }}
                 >
                   <Box>
                     <Typography variant="h6" fontWeight={700}>
-                      {escala.culto || 'Escala'}
+                      {escala.culto || "Escala"}
                     </Typography>
 
                     <Typography
@@ -196,7 +196,12 @@ export default function MinhasEscalasPage() {
                       color="text.secondary"
                       sx={{ mt: 0.5 }}
                     >
-                      Instrumento: {escala.instrumento || 'Não informado'}
+                      Instrumento: {escala.instrumento || "Não informado"}
+                    </Typography>
+
+                    <Typography variant="body2">
+                      {new Date(escala.dataEscala).toLocaleDateString("pt-BR")} às{" "}
+                      {escala.horario}
                     </Typography>
 
                     {escala.observacao && (
@@ -222,9 +227,9 @@ export default function MinhasEscalasPage() {
 
                   <Box
                     sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      flexWrap: 'wrap',
+                      display: "flex",
+                      alignItems: "center",
+                      flexWrap: "wrap",
                       gap: 1,
                     }}
                   >
@@ -243,9 +248,7 @@ export default function MinhasEscalasPage() {
                         disabled={carregandoConfirmacao}
                         onClick={() => handleConfirmar(escala.id)}
                       >
-                        {carregandoConfirmacao
-                          ? 'Confirmando...'
-                          : 'Confirmar'}
+                        {carregandoConfirmacao ? "Confirmando..." : "Confirmar"}
                       </Button>
                     )}
                   </Box>
