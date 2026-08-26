@@ -30,18 +30,18 @@ import {
 } from "../../../services/agendaMensalService";
 
 const meses = [
-  { valor: 1, nome: "Janeiro" },
-  { valor: 2, nome: "Fevereiro" },
-  { valor: 3, nome: "Março" },
-  { valor: 4, nome: "Abril" },
-  { valor: 5, nome: "Maio" },
-  { valor: 6, nome: "Junho" },
-  { valor: 7, nome: "Julho" },
-  { valor: 8, nome: "Agosto" },
-  { valor: 9, nome: "Setembro" },
-  { valor: 10, nome: "Outubro" },
-  { valor: 11, nome: "Novembro" },
-  { valor: 12, nome: "Dezembro" },
+  { valor: 1, nome: "JANEIRO" },
+  { valor: 2, nome: "FEVEREIRO" },
+  { valor: 3, nome: "MARÇO" },
+  { valor: 4, nome: "ABRIL" },
+  { valor: 5, nome: "MAIO" },
+  { valor: 6, nome: "JUNHO" },
+  { valor: 7, nome: "JULHO" },
+  { valor: 8, nome: "AGOSTO" },
+  { valor: 9, nome: "SETEMBRO" },
+  { valor: 10, nome: "OUTUBRO" },
+  { valor: 11, nome: "NOVEMBRO" },
+  { valor: 12, nome: "DEZEMBRO" },
 ];
 
 const anoAtual = new Date().getFullYear();
@@ -54,18 +54,18 @@ const initialForm = {
 };
 
 const tiposEscala = [
-  { valor: "MANUAL", nome: "Manual" },
-  { valor: "QUARTA_FEIRA", nome: "Automatica" },
+  { valor: "MANUAL", nome: "MANUAL" },
+  { valor: "AUTOMATICA", nome: "AUTOMATICA" },
 ];
 
 const initialFormGerarEscalas = {
   tipoEscala: "",
   horarioManha: "09:00",
   horarioNoite: "19:00",
-  nomeCultoManha: "Culto da Manhã",
-  nomeCultoNoite: "Culto da Noite",
+  nomeCultoManha: "CULTO DA MANHÃ",
+  nomeCultoNoite: "Culto DA NOITE",
   gerarDomingos: true,
-  repetirMesmaEquipe: false,
+  repetirMesmaEquipe: true,
 };
 
 function getMensagemErro(error, fallback) {
@@ -84,8 +84,8 @@ function nomeMes(numeroMes) {
 
 function traduzirStatus(status) {
   const statusLabels = {
-    EM_MONTAGEM: "Em montagem",
-    FINALIZADA: "Finalizada",
+    EM_MONTAGEM: "EM MONTAGEM",
+    FINALIZADA: "FINALIZADA",
   };
 
   return statusLabels[status] || status;

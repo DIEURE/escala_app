@@ -1,23 +1,71 @@
-import { useEffect, useState } from 'react';
-import { Box, Button, Paper, Typography, Stack, CircularProgress } from '@mui/material';
-import PageHeader from '../../../components/common/PageHeader';
-import ModalEscalaManual from '../components/ModalEscalaManual';
-import ModalEscalaAutomatica from '../components/ModalEscalaAutomatica';
-import ModalDetalhesEscala from '../components/ModalDetalhesEscala';
-import { listarEscalas, buscarDetalhesEscala } from '../../../services/escalaService';
+import { useEffect, useState } from "react";
+import { MenuItem, Select, FormControl, InputLabel } from "@mui/material";
+import { styled } from '@mui/material/styles';
+import {
+  Box,
+  Button,
+  CircularProgress,
+  Paper,
+  Table,
+  TableBody,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+} from "@mui/material";
+import TableCell, { tableCellClasses } from "@mui/material/TableCell";
+import PageHeader from "../../../components/common/PageHeader";
+import ModalEscalaManual from "../components/ModalEscalaManual";
+import ModalEscalaAutomatica from "../components/ModalEscalaAutomatica";
+import ModalDetalhesEscala from "../components/ModalDetalhesEscala";
+import {
+  listarEscalas,
+  buscarDetalhesEscala,
+} from "../../../services/escalaService";
 
 export default function EscalasPage() {
-  const [modal, setModal] = useState(null); // 'MANUAL' | 'AUTOMATICA' | 'DETALHES'
+  const [modal, setModal] = useState(null);
   const [escalas, setEscalas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [escalaSelecionada, setEscalaSelecionada] = useState(null);
+  const [filtroMes, setFiltroMes] = useState("TODOS");
+  const escalasFiltradas = escalas.filter((e) => {
+    if (filtroMes === "TODOS") return true;
+    const mesEscala = e.dataEscala.split("-")[1]; // Pega o mês (ex: '08')
+    return mesEscala === filtroMes;
+  });
+
+  const StyledTableCell = styled(TableCell)(({ theme }) => ({
+    [`&.${tableCellClasses.head}`]: {
+      backgroundColor: theme.palette.common.black,
+      color: theme.palette.common.white,
+    },
+    [`&.${tableCellClasses.body}`]: {
+      fontSize: 14,
+    },
+  }));
+
+  const StyledTableRow = styled(TableRow)(({ theme }) => ({
+    "&:nth-of-type(odd)": {
+      backgroundColor: theme.palette.action.hover,
+    },
+    // hide last border
+    "&:last-child td, &:last-child th": {
+      border: 0,
+    },
+  }));
 
   async function carregarEscalas() {
     try {
       setLoading(true);
       const data = await listarEscalas();
-      // Ordenando da mais recente para a mais antiga
-      const ordenadas = data.sort((a, b) => new Date(a.dataEscala) - new Date(b.dataEscala));
+      // Ordenação simples garantida
+      const ordenadas = data.sort(
+        (a, b) => new Date(a.dataEscala) - new Date(b.dataEscala),
+      );
       setEscalas(ordenadas);
     } catch (error) {
       console.error("Erro ao listar escalas", error);
@@ -26,14 +74,17 @@ export default function EscalasPage() {
     }
   }
 
+  // Função para formatar data sem erro de fuso (-1 dia)
+  const formatarData = (dataString) => {
+    if (!dataString) return "";
+    const [ano, mes, dia] = dataString.split("-");
+    return `${dia}/${mes}/${ano}`;
+  };
+
   const handleAbrirDetalhes = async (escala) => {
-    try {
-      const detalhes = await buscarDetalhesEscala(escala.id);
-      setEscalaSelecionada(detalhes);
-      setModal('DETALHES');
-    } catch (error) {
-      console.error("Erro ao buscar detalhes da escala", error);
-    }
+    const detalhes = await buscarDetalhesEscala(escala.id);
+    setEscalaSelecionada(detalhes);
+    setModal("DETALHES");
   };
 
   useEffect(() => {
@@ -42,66 +93,150 @@ export default function EscalasPage() {
 
   return (
     <Box>
-      <PageHeader 
-        title="Escalas" 
+      <PageHeader
+        title="Escalas"
         action={
-          <Button variant="contained" onClick={() => setModal('SELECAO')}>
+          <Button variant="contained" onClick={() => setModal("SELECAO")}>
             Nova Escala
           </Button>
         }
       />
 
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 24 }}>
           <CircularProgress />
         </Box>
       ) : (
-        <Stack spacing={2} sx={{ mt: 3 }}>
-          {escalas.length > 0 ? escalas.map((escala) => (
-            <Paper key={escala.id} sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Box>
-                <Typography variant="h6">{escala.culto}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {new Date(escala.dataEscala).toLocaleDateString('pt-BR')} às {escala.horario}
-                </Typography>
-              </Box>
-              <Button variant="outlined" size="small" onClick={() => handleAbrirDetalhes(escala)}>
-                Ver Detalhes
-              </Button>
-            </Paper>
-          )) : (
-            <Typography sx={{ textAlign: 'center', mt: 4 }}>Nenhuma escala encontrada.</Typography>
-          )}
-        </Stack>
+        <TableContainer component={Paper} >
+          <Box sx={{ display: "flex", gap: 2, mb: 2, alignItems: "center" }}>
+            <FormControl sx={{ minWidth: 150 }}>
+              <InputLabel>Filtrar por Mês</InputLabel>
+              <Select
+                value={filtroMes}
+                onChange={(e) => setFiltroMes(e.target.value)}
+                label="Filtrar por Mês"
+              >
+                <MenuItem value="TODOS">Todos os Meses</MenuItem>
+                {[
+                  "01",
+                  "02",
+                  "03",
+                  "04",
+                  "05",
+                  "06",
+                  "07",
+                  "08",
+                  "09",
+                  "10",
+                  "11",
+                  "12",
+                ].map((m) => (
+                  <MenuItem key={m} value={m}>
+                    Mês {m}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+           <Table sx={{ minWidth: 700 }} aria-label="customized table">
+            <TableHead sx={{ backgroundColor: "#C9C9C9" }}>
+              <TableRow>
+                <TableCell>
+                  <b>Data</b>
+                </TableCell>
+                <TableCell>
+                  <b>Horário</b>
+                </TableCell>
+                <TableCell>
+                  <b>Culto</b>
+                </TableCell>
+                <TableCell align="center">
+                  <b>Ações</b>
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {escalasFiltradas.map((escala) => (
+                <TableRow
+                  key={escala.id}
+                  hover
+                  sx={{
+                    // Se a escala não estiver ativa, deixa um fundo levemente amarelado ou vermelho
+                    backgroundColor: escala.ativa ? "inherit" : "#fff3e0",
+                  }}
+                >
+                  <TableCell>{formatarData(escala.dataEscala)}</TableCell>
+                  <TableCell>{escala.horario}</TableCell>
+                  <TableCell>
+                    {escala.culto}
+                    {!escala.ativa && (
+                      <Typography
+                        variant="caption"
+                        color="error"
+                        sx={{ ml: 1 }}
+                      >
+                        (Pendente)
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell align="center">
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => handleAbrirDetalhes(escala)}
+                    >
+                      Ver Detalhes
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
 
-      {/* Modais de Gerenciamento */}
-      <ModalEscalaManual 
-        open={modal === 'MANUAL'} 
-        onClose={() => setModal(null)} 
-        onSave={carregarEscalas} 
-      />
-      
-      <ModalEscalaAutomatica 
-        open={modal === 'AUTOMATICA'} 
-        onClose={() => setModal(null)} 
-        onSave={carregarEscalas} 
-      />
+      {/* Modais mantidos conforme sua estrutura anterior */}
+      <Dialog
+        open={modal === "SELECAO"}
+        onClose={() => setModal(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Como gerar a escala?</DialogTitle>
+        <DialogContent>
+          <Button
+            fullWidth
+            variant="outlined"
+            sx={{ mb: 2 }}
+            onClick={() => setModal("MANUAL")}
+          >
+            ESCALA MANUAL
+          </Button>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={() => setModal("AUTOMATICA")}
+          >
+            ESCALA AUTOMÁTICA
+          </Button>
+        </DialogContent>
+      </Dialog>
 
-      {/* Modal de Detalhes */}
-      <ModalDetalhesEscala 
-        open={modal === 'DETALHES'} 
-        onClose={() => setModal(null)} 
-        data={escalaSelecionada} 
+      <ModalEscalaManual
+        open={modal === "MANUAL"}
+        onClose={() => setModal(null)}
+        onSave={carregarEscalas}
       />
-
-      {/* Modal de Escolha Inicial */}
-      {/* Você pode criar um componente próprio ou manter este Dialog simples */}
-      {modal === 'SELECAO' && (
-        <div open={true} onClick={() => setModal(null)}>
-           {/* Aqui entraria seu Dialog de escolha manual/automática que já criamos antes */}
-        </div>
-      )}
+      <ModalEscalaAutomatica
+        open={modal === "AUTOMATICA"}
+        onClose={() => setModal(null)}
+        onSave={carregarEscalas}
+      />
+      <ModalDetalhesEscala
+        open={modal === "DETALHES"}
+        onClose={() => setModal(null)}
+        data={escalaSelecionada}
+      />
     </Box>
   );
 }

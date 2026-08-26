@@ -59,3 +59,12 @@ export async function gerarEscalasAutomaticas(agendaMensalId, dados) {
   );
   return response.data;
 }
+
+export const buscarDadosIniciais = async () => {
+    // Exemplo: retorna { agendas: [...], departamentos: [...] }
+    const [agendas, departamentos] = await Promise.all([
+        api.get('/agendas-mensais/ativas'),
+        api.get('/departamentos')
+    ]);
+    return { agendas: agendas.data, departamentos: departamentos.data };
+};
