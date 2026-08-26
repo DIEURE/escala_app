@@ -38,25 +38,17 @@ export default function EscalasPage() {
     return mesEscala === filtroMes;
   });
 
-  const StyledTableCell = styled(TableCell)(({ theme }) => ({
-    [`&.${tableCellClasses.head}`]: {
-      backgroundColor: theme.palette.common.black,
-      color: theme.palette.common.white,
-    },
-    [`&.${tableCellClasses.body}`]: {
-      fontSize: 14,
-    },
-  }));
-
-  const StyledTableRow = styled(TableRow)(({ theme }) => ({
-    "&:nth-of-type(odd)": {
-      backgroundColor: theme.palette.action.hover,
-    },
-    // hide last border
-    "&:last-child td, &:last-child th": {
-      border: 0,
-    },
-  }));
+  const handleMudarStatus = async (id, novoStatus) => {
+    try {
+        await api.patch(`/escalas/${id}/status`, novoStatus, {
+            headers: { 'Content-Type': 'application/json' }
+        });
+        alert("Status atualizado com sucesso!");
+        // Chame sua função de recarregar a lista aqui
+    } catch (error) {
+        console.error("Erro ao mudar status:", error);
+    }
+};
 
   async function carregarEscalas() {
     try {
@@ -100,6 +92,7 @@ export default function EscalasPage() {
             Nova Escala
           </Button>
         }
+         
       />
 
       {loading ? (
@@ -145,7 +138,10 @@ export default function EscalasPage() {
                   <b>Data</b>
                 </TableCell>
                 <TableCell>
-                  <b>Horário</b>
+                  <b>Hr.Início</b>
+                </TableCell>
+                <TableCell>
+                  <b>Hr.Fim</b>
                 </TableCell>
                 <TableCell>
                   <b>Culto</b>
@@ -162,11 +158,12 @@ export default function EscalasPage() {
                   hover
                   sx={{
                     // Se a escala não estiver ativa, deixa um fundo levemente amarelado ou vermelho
-                    backgroundColor: escala.ativa ? "inherit" : "#fff3e0",
+                    backgroundColor: escala.ativa ? "inherit" : "#ffffff",
                   }}
                 >
                   <TableCell>{formatarData(escala.dataEscala)}</TableCell>
                   <TableCell>{escala.horario}</TableCell>
+                  <TableCell>{escala.horarioFim}</TableCell>
                   <TableCell>
                     {escala.culto}
                     {!escala.ativa && (

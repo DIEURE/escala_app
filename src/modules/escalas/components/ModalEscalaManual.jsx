@@ -61,6 +61,18 @@ export default function ModalEscalaManual({ open, onClose, onSave }) {
     }
   }, [open]);
 
+  useEffect(() => {
+    if (form.departamentoId) {
+      api
+        .get(`/usuarios/departamento/${form.departamentoId}`)
+        .then((res) => {
+          console.log("Músicos recebidos do backend:", res.data); // ADICIONE ISSO
+          setOpcoes((prev) => ({ ...prev, musicos: res.data }));
+        })
+        .catch((err) => console.error("Erro ao buscar músicos:", err));
+    }
+  }, [form.departamentoId]);
+
   // Busca a agenda selecionada para pegar o mês e ano
   const agendaSelecionada = opcoes.agendas.find(
     (a) => a.id === form.agendaMensalId,
@@ -135,10 +147,36 @@ export default function ModalEscalaManual({ open, onClose, onSave }) {
     }
   };
 
+  const toggleMusico = (id) => {
+    setMusicosSelecionados((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+  // Agrupa os músicos por instrumento
+  const musicosAgrupados = opcoes.musicos.reduce((acc, musico) => {
+    const tipo = musico.nomeInstrumento || "Outros";
+    if (!acc[tipo]) acc[tipo] = [];
+    acc[tipo].push(musico);
+    return acc;
+  }, {});
+
+  const contagemPorInstrumento = musicosSelecionados.reduce((acc, id) => {
+    const musico = opcoes.musicos.find((m) => m.id === id);
+    if (musico) {
+      acc[musico.nomeInstrumento] = (acc[musico.nomeInstrumento] || 0) + 1;
+    }
+    return acc;
+  }, {});
+
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="pt-br">
       <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-        <DialogTitle>
+        <DialogTitle
+          sx={{
+            backgroundColor: (theme) => theme.palette.primary.main,
+            color: (theme) => theme.palette.primary.contrastText,
+          }}
+        >
           {etapa === 1
             ? "Escala Manual: Dados"
             : "Escala Manual: Selecionar Músicos"}
@@ -213,24 +251,52 @@ export default function ModalEscalaManual({ open, onClose, onSave }) {
             </Stack>
           ) : (
             <List>
-              {opcoes.musicos.map((m) => (
-                <ListItem
-                  key={m.id}
-                  style={{ opacity: m.disponibilidade ? 1 : 0.5 }}
-                >
-                  <ListItemButton
-                    disabled={!m.disponibilidade} // Bloqueia a seleção se ele não estiver disponível
-                    onClick={() => {
-                      /* sua lógica de selecionar */
-                    }}
+              {Object.keys(musicosAgrupados).map((instrumento) => (
+                <div key={instrumento}>
+                  {/* Título do Grupo (Instrumento) */}
+                  <Divider
+                    textAlign="left"
+                    sx={{ mt: 2, mb: 1, fontWeight: "bold" }}
                   >
-                    <Checkbox checked={musicosSelecionados.includes(m.id)} />
-                    <ListItemText
-                      primary={`${m.nome} ${m.disponibilidade ? "" : "(Indisponível)"}`}
-                      secondary={`Instumento: ${m.nomeInstrumento}`}
-                    />
-                  </ListItemButton>
-                </ListItem>
+                    {instrumento.toUpperCase()}
+                  </Divider>
+
+                  {/* Músicos daquele instrumento */}
+                  {musicosAgrupados[instrumento].map((m) => {
+                    const jaSelecionados =
+                      contagemPorInstrumento[m.nomeInstrumento] || 0;
+                    // Assumindo que você adicionou o campo quantidadeEscala no DTO e ele está em 'm'
+                    const limite = m.quantidadeEscala || 1;
+                    const atingiuLimite =
+                      jaSelecionados >= limite &&
+                      !musicosSelecionados.includes(m.id);
+
+                    return (
+                      <ListItem key={m.id} disablePadding>
+                        <ListItemButton
+                          disabled={!m.disponibilidade || atingiuLimite}
+                          onClick={() => toggleMusico(m.id)}
+                        >
+                          <Checkbox
+                            edge="start"
+                            checked={musicosSelecionados.includes(m.id)}
+                            disableRipple
+                          />
+                          <ListItemText
+                            primary={m.nome}
+                            secondary={
+                              atingiuLimite
+                                ? "Limite de " + limite + " atingido"
+                                : m.disponibilidade
+                                  ? "Disponível"
+                                  : "Indisponível"
+                            }
+                          />
+                        </ListItemButton>
+                      </ListItem>
+                    );
+                  })}
+                </div>
               ))}
             </List>
           )}
