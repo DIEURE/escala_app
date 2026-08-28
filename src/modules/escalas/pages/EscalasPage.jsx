@@ -21,6 +21,7 @@ import PageHeader from "../../../components/common/PageHeader";
 import ModalEscalaManual from "../components/ModalEscalaManual";
 import ModalEscalaAutomatica from "../components/ModalEscalaAutomatica";
 import ModalDetalhesEscala from "../components/ModalDetalhesEscala";
+import ModalEditarEscala from "../components/ModalEditarEscala"; 
 import {
   listarEscalas,
   buscarDetalhesEscala,
@@ -219,7 +220,7 @@ export default function EscalasPage() {
         </DialogContent>
       </Dialog>
 
-      <ModalEscalaManual
+      {/* <ModalEscalaManual
         open={modal === "MANUAL"}
         onClose={() => setModal(null)}
         onSave={carregarEscalas}
@@ -233,7 +234,42 @@ export default function EscalasPage() {
         open={modal === "DETALHES"}
         onClose={() => setModal(null)}
         data={escalaSelecionada}
-      />
+      /> */}
+
+
+
+<ModalDetalhesEscala
+  open={modal === "DETALHES"}
+  onClose={() => setModal(null)}
+  data={escalaSelecionada}
+  onEdit={(data) => {
+    setModal("EDITAR_FISCAL"); // Novo estado para o modal nota fiscal
+  }}
+/>
+
+{/* O NOVO MODAL ESTILO NOTA FISCAL */}
+<ModalEditarEscala
+  open={modal === "EDITAR_FISCAL"}
+  onClose={() => setModal(null)}
+  data={escalaSelecionada} // Passa o objeto completo {escala, musicos}
+  onSave={() => {
+    carregarEscalas();
+    setModal(null);
+  }}
+/>
+
+<ModalEscalaAutomatica
+  open={modal === "AUTOMATICA"}
+  onClose={() => setModal(null)}
+  onSave={carregarEscalas}
+/>
+
+<ModalEscalaManual
+  open={modal === "MANUAL"}
+  onClose={() => setModal(null)}
+  onSave={carregarEscalas}
+/>
+
     </Box>
   );
 }

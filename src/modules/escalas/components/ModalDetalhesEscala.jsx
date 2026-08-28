@@ -38,7 +38,8 @@ export default function ModalDetalhesEscala({ open, onClose, data, onEdit }) {
   return ( 
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm"> 
       <DialogTitle> 
-        {escala.culto} - {escala.dataEscala} 
+        {escala.culto?.toUpperCase()} - {new Date(escala.dataEscala).toLocaleDateString('pt-BR', {  day: '2-digit', month: '2-digit', year: 'numeric' })}
+         -{escala.horario}
         <IconButton onClick={onClose} sx={{ float: 'right' }}><CloseIcon /></IconButton> 
       </DialogTitle> 
               

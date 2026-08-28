@@ -10,8 +10,6 @@ import {
   Select,
   MenuItem,
   TextField,
-  FormControlLabel,
-  Switch,
   Checkbox,
   ListItemText,
   List,
@@ -27,8 +25,9 @@ import "dayjs/locale/pt-br";
 import { useEffect, useState } from "react";
 import api from "../../../services/api";
 
-export default function ModalEscalaManual({ open, onClose, onSave }) {
-  const [etapa, setEtapa] = useState(1); // 1: Dados, 2: Músicos
+export default function ModalEscalaManual({ open, onClose, onSave, escalaParaEditar }) {
+  const [modoEdicao, setModoEdicao] = useState(false);
+  const [etapa, setEtapa] = useState(1);
   const [escalaId, setEscalaId] = useState(null);
   const [form, setForm] = useState({
     agendaMensalId: "",
@@ -37,57 +36,81 @@ export default function ModalEscalaManual({ open, onClose, onSave }) {
     culto: "",
     horario: "",
     horarioFim: "",
+    observacao: "",
   });
-
   const [opcoes, setOpcoes] = useState({
     agendas: [],
     departamentos: [],
     musicos: [],
   });
   const [musicosSelecionados, setMusicosSelecionados] = useState([]);
+  const [erroConflito, setErroConflito] = useState(false);
 
   useEffect(() => {
     if (open) {
+      setEtapa(1);
+      setEscalaId(null);
+      setMusicosSelecionados([]);
+      setForm({
+        agendaMensalId: "",
+        dataEscala: null,
+        departamentoId: "",
+        culto: "",
+        horario: "",
+        horarioFim: "",
+        observacao: "",
+      });
+
       const carregar = async () => {
-        const resAgendas = await api.get("/agenda-mensal");
-        const resDept = await api.get("/departamentos");
-        setOpcoes((prev) => ({
-          ...prev,
+        const [resAgendas, resDept] = await Promise.all([
+          api.get("/agenda-mensal"),
+          api.get("/departamentos"),
+        ]);
+        setOpcoes({
           agendas: resAgendas.data,
           departamentos: resDept.data,
-        }));
+          musicos: [],
+        });
       };
       carregar();
     }
   }, [open]);
 
   useEffect(() => {
-    if (form.departamentoId) {
-      api
-        .get(`/usuarios/departamento/${form.departamentoId}`)
-        .then((res) => {
-          console.log("Músicos recebidos do backend:", res.data); // ADICIONE ISSO
-          setOpcoes((prev) => ({ ...prev, musicos: res.data }));
-        })
-        .catch((err) => console.error("Erro ao buscar músicos:", err));
-    }
-  }, [form.departamentoId]);
+    const checarConflito = async () => {
+      // Verifica se os campos existem e se a data é um objeto dayjs válido
+      const temData =
+        form.dataEscala && typeof form.dataEscala.format === "function";
 
-  // Busca a agenda selecionada para pegar o mês e ano
-  const agendaSelecionada = opcoes.agendas.find(
-    (a) => a.id === form.agendaMensalId,
-  );
+      if (temData && form.horario && form.departamentoId) {
+        try {
+          // Formata os dados exatamente como o backend espera
+          const params = {
+            data: form.dataEscala.format("YYYY-MM-DD"),
+            horario:
+              form.horario.length === 5 ? `${form.horario}:00` : form.horario,
+            departamentoId: form.departamentoId,
+          };
 
-  // Define os limites do calendário baseado na agenda
-  const minDate = agendaSelecionada
-    ? dayjs(`${agendaSelecionada.ano}-${agendaSelecionada.mes}-01`)
-    : null;
-  const maxDate = minDate ? minDate.endOf("month") : null;
+          const res = await api.get(`/escalas/verificar-conflito`, { params });
 
-  // Buscar músicos quando departamento muda
+          console.log("Params enviados:", params);
+          console.log("Resposta do Backend (res.data):", res.data); // ADICIONE ESTE LOG
+
+          setErroConflito(res.data);
+        } catch (err) {
+          console.error("Erro na requisição de conflito:", err);
+        }
+      } else {
+        setErroConflito(false);
+      }
+    };
+
+    checarConflito();
+  }, [form.dataEscala, form.horario, form.departamentoId]);
+
   useEffect(() => {
     if (form.departamentoId) {
-      // Agora apontamos para o seu novo endpoint no UsuarioController
       api
         .get(`/usuarios/departamento/${form.departamentoId}`)
         .then((res) => setOpcoes((prev) => ({ ...prev, musicos: res.data })));
@@ -100,7 +123,7 @@ export default function ModalEscalaManual({ open, onClose, onSave }) {
         agendaMensalId: form.agendaMensalId,
         departamentoId: Number(form.departamentoId),
         dataEscala: form.dataEscala
-          ? form.dataEscala.format("YYYY-MM-DD")
+          ? dayjs(form.dataEscala).format("YYYY-MM-DD")
           : null,
         tipoEscala: "MANUAL",
         horario:
@@ -111,210 +134,199 @@ export default function ModalEscalaManual({ open, onClose, onSave }) {
             : form.horarioFim
           : null,
         culto: form.culto,
-        observacao: form.observacao,
+        observacao: form.observacao || "",
       };
+
       const res = await api.post("/escalas", payload);
       setEscalaId(res.data.id);
-      setEtapa(2);
+      setEtapa(2); // Agora vai avançar!
     } catch (error) {
-      console.error("Erro completo:", error); // Veja o log detalhado no F12
-      if (error.response) {
-        console.error("Dados do erro:", error.response.data);
-        alert("Erro do servidor: " + JSON.stringify(error.response.data));
+      if (error.response?.status === 400) {
+        alert(
+          "Atenção: Já existe uma escala cadastrada para este horário e departamento.",
+        );
       } else {
-        alert("Erro na rede ou no processamento da resposta");
+        alert(
+          "Erro ao salvar: " +
+            (error.response?.data?.message || "Erro desconhecido"),
+        );
       }
     }
   };
 
   const handleFinalizar = async () => {
     try {
-      // Certifique-se que escalaId não é nulo
-      if (!escalaId) return;
-
-      // musicosSelecionados é um array de IDs (ex: [1, 5, 8])
       await api.post(
         `/escalas/${escalaId}/adicionar-musicos`,
         musicosSelecionados,
       );
-
-      alert("Escala criada e músicos vinculados com sucesso!");
-      onSave(); // Recarrega a tela de escalas principal
-      onClose(); // Fecha o modal
+      alert("Escala criada com sucesso!");
+      onSave();
+      onClose();
     } catch (error) {
-      console.error("Erro ao vincular músicos:", error);
-      alert("Erro ao finalizar escala.");
+      alert("Erro ao vincular músicos");
     }
   };
 
-  const toggleMusico = (id) => {
-    setMusicosSelecionados((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
-    );
-  };
-  // Agrupa os músicos por instrumento
-  const musicosAgrupados = opcoes.musicos.reduce((acc, musico) => {
-    const tipo = musico.nomeInstrumento || "Outros";
+  const musicosAgrupados = opcoes.musicos.reduce((acc, m) => {
+    const tipo = m.nomeInstrumento || "Outros";
     if (!acc[tipo]) acc[tipo] = [];
-    acc[tipo].push(musico);
+    acc[tipo].push(m);
     return acc;
   }, {});
 
-  const contagemPorInstrumento = musicosSelecionados.reduce((acc, id) => {
-    const musico = opcoes.musicos.find((m) => m.id === id);
-    if (musico) {
-      acc[musico.nomeInstrumento] = (acc[musico.nomeInstrumento] || 0) + 1;
-    }
-    return acc;
-  }, {});
+  const getCount = (inst) =>
+    musicosSelecionados.filter(
+      (id) => opcoes.musicos.find((m) => m.id === id)?.nomeInstrumento === inst,
+    ).length;
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="pt-br">
-      <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-        <DialogTitle
-          sx={{
-            backgroundColor: (theme) => theme.palette.primary.main,
-            color: (theme) => theme.palette.primary.contrastText,
-          }}
-        >
-          {etapa === 1
-            ? "Escala Manual: Dados"
-            : "Escala Manual: Selecionar Músicos"}
-        </DialogTitle>
-        <DialogContent>
-          {etapa === 1 ? (
-            <Stack spacing={2} sx={{ mt: 2 }}>
-              <FormControl fullWidth>
-                <InputLabel>Agenda Mensal</InputLabel>
-                <Select
-                  value={form.agendaMensalId}
-                  onChange={(e) =>
-                    setForm({ ...form, agendaMensalId: e.target.value })
-                  }
-                >
-                  {opcoes.agendas.map((a) => (
-                    <MenuItem key={a.id} value={a.id}>
-                      {a.descricao}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <DatePicker
-                label="Data da Escala"
-                value={form.dataEscala}
-                minDate={minDate}
-                maxDate={maxDate}
-                disabled={!form.agendaMensalId}
-                onChange={(newValue) =>
-                  setForm({ ...form, dataEscala: newValue })
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle
+        sx={{ backgroundColor: "primary.main", color: "primary.contrastText" }}
+      >
+        {etapa === 1 ? "Escala Manual: Dados" : "Escala Manual: Músicos"}
+      </DialogTitle>
+      <DialogContent>
+        {etapa === 1 ? (
+          <Stack spacing={2} sx={{ mt: 2 }}>
+            <FormControl fullWidth>
+              <InputLabel>Agenda</InputLabel>
+              <Select
+                value={form.agendaMensalId}
+                onChange={(e) =>
+                  setForm({ ...form, agendaMensalId: e.target.value })
                 }
-                slotProps={{ textField: { fullWidth: true } }}
-              />
+              >
+                {opcoes.agendas.map((a) => (
+                  <MenuItem key={a.id} value={a.id}>
+                    {a.descricao}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <DatePicker
+              label="Data"
+              value={form.dataEscala}
+              onChange={(v) => setForm({ ...form, dataEscala: v })}
+              slotProps={{ textField: { fullWidth: true } }}
+            />
+            <FormControl fullWidth>
               <InputLabel>Departamento</InputLabel>
-              <FormControl fullWidth>
-                <Select
-                  value={form.departamentoId}
-                  onChange={(e) =>
-                    setForm({ ...form, departamentoId: e.target.value })
-                  }
-                >
-                  {opcoes.departamentos.map((d) => (
-                    <MenuItem key={d.id} value={d.id}>
-                      {d.nome}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <Select
+                value={form.departamentoId}
+                onChange={(e) =>
+                  setForm({ ...form, departamentoId: e.target.value })
+                }
+              >
+                {opcoes.departamentos.map((d) => (
+                  <MenuItem key={d.id} value={d.id}>
+                    {d.nome}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <TextField
+              label="Evento"
+              fullWidth
+              value={form.culto}
+              onChange={(e) => setForm({ ...form, culto: e.target.value })}
+            />
+            <TextField
+              label="Grupo"
+              fullWidth
+              value={form.observacao}
+              onChange={(e) => setForm({ ...form, observacao: e.target.value })}
+            />
+            <Stack direction="row" spacing={2}>
               <TextField
-                label="Nome Evento"
-                fullWidth
-                value={form.culto}
-                onChange={(e) => setForm({ ...form, culto: e.target.value })}
-              />
-              <InputLabel>Inicio</InputLabel>
-              <TextField
-                //label="Horário de Início"
+                label="Início"
                 type="time"
+                fullWidth
                 value={form.horario}
                 onChange={(e) => setForm({ ...form, horario: e.target.value })}
               />
-              <InputLabel>Fim</InputLabel>
               <TextField
-                //label="Horário de Fim"
+                label="Fim"
                 type="time"
-                InputLabelProps={{ shrink: true }}
+                fullWidth
                 value={form.horarioFim}
                 onChange={(e) =>
                   setForm({ ...form, horarioFim: e.target.value })
                 }
+                InputLabelProps={{ shrink: true }}
               />
             </Stack>
-          ) : (
-            <List>
-              {Object.keys(musicosAgrupados).map((instrumento) => (
-                <div key={instrumento}>
-                  {/* Título do Grupo (Instrumento) */}
-                  <Divider
-                    textAlign="left"
-                    sx={{ mt: 2, mb: 1, fontWeight: "bold" }}
-                  >
-                    {instrumento.toUpperCase()}
-                  </Divider>
-
-                  {/* Músicos daquele instrumento */}
-                  {musicosAgrupados[instrumento].map((m) => {
-                    const jaSelecionados =
-                      contagemPorInstrumento[m.nomeInstrumento] || 0;
-                    // Assumindo que você adicionou o campo quantidadeEscala no DTO e ele está em 'm'
-                    const limite = m.quantidadeEscala || 1;
-                    const atingiuLimite =
-                      jaSelecionados >= limite &&
-                      !musicosSelecionados.includes(m.id);
-
-                    return (
-                      <ListItem key={m.id} disablePadding>
-                        <ListItemButton
-                          disabled={!m.disponibilidade || atingiuLimite}
-                          onClick={() => toggleMusico(m.id)}
-                        >
-                          <Checkbox
-                            edge="start"
-                            checked={musicosSelecionados.includes(m.id)}
-                            disableRipple
-                          />
-                          <ListItemText
-                            primary={m.nome}
-                            secondary={
-                              atingiuLimite
-                                ? "Limite de " + limite + " atingido"
-                                : m.disponibilidade
-                                  ? "Disponível"
-                                  : "Indisponível"
-                            }
-                          />
-                        </ListItemButton>
-                      </ListItem>
-                    );
-                  })}
-                </div>
-              ))}
-            </List>
-          )}
-        </DialogContent>
-        <DialogActions>
-          {etapa === 1 ? (
-            <Button onClick={onClose}>Cancelar</Button>
-          ) : (
-            <Button onClick={() => setEtapa(1)}>Voltar</Button>
-          )}
-          <Button
-            variant="contained"
-            onClick={etapa === 1 ? handleSalvarDados : handleFinalizar}
-          >
-            {etapa === 1 ? "Próximo" : "Finalizar Escala"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </LocalizationProvider>
+            {erroConflito && (
+              <div style={{ color: "red", fontWeight: "bold" }}>
+                ⚠️ Escala já existe para este horário!
+              </div>
+            )}
+          </Stack>
+        ) : (
+          <List>
+            {Object.keys(musicosAgrupados).map((inst) => (
+              <div key={inst}>
+                <Divider sx={{ mt: 2, mb: 1, fontWeight: "bold" }}>
+                  {inst.toUpperCase()}
+                </Divider>
+                {musicosAgrupados[inst].map((m) => {
+                  const lim =
+                    m.quantidade_Escala ||
+                    m.instrumento?.quantidade_Escala ||
+                    1;
+                  const count = getCount(inst);
+                  const blocked =
+                    !m.disponibilidade ||
+                    (count >= lim && !musicosSelecionados.includes(m.id));
+                  return (
+                    <ListItem key={m.id} disablePadding>
+                      <ListItemButton
+                        disabled={blocked}
+                        onClick={() =>
+                          setMusicosSelecionados((prev) =>
+                            prev.includes(m.id)
+                              ? prev.filter((i) => i !== m.id)
+                              : [...prev, m.id],
+                          )
+                        }
+                      >
+                        <Checkbox
+                          checked={musicosSelecionados.includes(m.id)}
+                        />
+                        <ListItemText
+                          primary={m.nome}
+                          secondary={
+                            blocked
+                              ? "Limite atingido"
+                              : `Quantidade Disponível: ${count}/${lim}`
+                          }
+                        />
+                      </ListItemButton>
+                    </ListItem>
+                  );
+                })}
+              </div>
+            ))}
+          </List>
+        )}
+      </DialogContent>
+      <DialogActions>
+        {etapa === 1 ? (
+          <Button onClick={onClose}>Cancelar</Button>
+        ) : (
+          <Button onClick={() => setEtapa(1)}>Voltar</Button>
+        )}
+        <Button
+          variant="contained"
+          // O botão fica desabilitado se o erroConflito for true
+          disabled={erroConflito}
+          onClick={etapa === 1 ? handleSalvarDados : handleFinalizar}
+        >
+          {etapa === 1 ? "Próximo" : "Finalizar Escala"}
+        </Button>
+        
+      </DialogActions>
+    </Dialog>
   );
 }

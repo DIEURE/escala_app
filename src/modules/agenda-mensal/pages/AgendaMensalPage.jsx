@@ -315,7 +315,7 @@ export default function AgendaMensalPage() {
   return (
     <Box>
       <PageHeader
-        title="Agenda mensal"
+        title="Agenda Mensal"
         description="Organize as agendas por mês e departamento."
         action={
           <Button variant="contained" onClick={abrirCadastro}>
