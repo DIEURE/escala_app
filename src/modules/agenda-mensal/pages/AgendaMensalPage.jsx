@@ -24,7 +24,6 @@ import { listarDepartamentos } from "../../../services/departamentoService";
 import {
   atualizarAgendaMensal,
   criarAgendaMensal,
-   
   inativarAgendaMensal,
   listarAgendasMensais,
 } from "../../../services/agendaMensalService";
@@ -46,13 +45,16 @@ const meses = [
 
 const anoAtual = new Date().getFullYear();
 
+ 
+
+
 const initialForm = {
   mes: new Date().getMonth() + 1,
   ano: anoAtual,
   descricao: "",
   departamentoId: "",
 };
-
+ 
 const tiposEscala = [
   { valor: "MANUAL", nome: "MANUAL" },
   { valor: "AUTOMATICA", nome: "AUTOMATICA" },
@@ -64,8 +66,8 @@ const initialFormGerarEscalas = {
   horarioNoite: "19:00",
   nomeCultoManha: "CULTO DA MANHÃ",
   nomeCultoNoite: "Culto DA NOITE",
-  gerarDomingos: true,
-  repetirMesmaEquipe: true,
+  gerarDomingos: false,
+  repetirMesmaEquipe: false,
 };
 
 function getMensagemErro(error, fallback) {
@@ -115,6 +117,8 @@ export default function AgendaMensalPage() {
   const [formGerarEscalas, setFormGerarEscalas] = useState(
     initialFormGerarEscalas,
   );
+
+ 
 
   async function carregarDados() {
     try {
@@ -169,11 +173,30 @@ export default function AgendaMensalPage() {
     });
   }, [agendas, filtroAno, filtroMes, filtroDepartamento]);
 
+
+  // Função auxiliar interna para gerar o formato (Ex: SET-26)
+  function gerarTextoDescricao(mesId, anoNum) {
+    const mesesMap = {
+      1: "JAN", 2: "FEV", 3: "MAR", 4: "ABR", 
+      5: "MAI", 6: "JUN", 7: "JUL", 8: "AGO", 
+      9: "SET", 10: "OUT", 11: "NOV", 12: "DEZ"
+    };
+    const mesAbreviado = mesesMap[Number(mesId)] || "";
+    const anoAbreviado = anoNum ? anoNum.toString().slice(-2) : ""; 
+    return mesAbreviado && anoAbreviado ? `${mesAbreviado}-${anoAbreviado}` : "";
+  }
+
   function abrirCadastro() {
     setErro("");
     setSucesso("");
     setAgendaEditando(null);
-    setForm(initialForm);
+    
+    // Inicia o formulário já com a descrição preenchida baseada no initialForm
+    setForm({
+      ...initialForm,
+      descricao: gerarTextoDescricao(initialForm.mes, initialForm.ano)
+    });
+    
     setDialogAberto(true);
   }
 
@@ -185,7 +208,7 @@ export default function AgendaMensalPage() {
     setForm({
       mes: agenda.mes,
       ano: agenda.ano,
-      descricao: agenda.descricao || "",
+      descricao: agenda.descricao || "", // Mantém a descrição que já veio do banco
       departamentoId: agenda.departamentoId,
     });
 
@@ -202,10 +225,19 @@ export default function AgendaMensalPage() {
   function handleChange(event) {
     const { name, value } = event.target;
 
-    setForm((atual) => ({
-      ...atual,
-      [name]: value,
-    }));
+    setForm((atual) => {
+      const novoEstado = {
+        ...atual,
+        [name]: value,
+      };
+
+      // Se alterou o mês ou o ano, e NÃO for uma edição, atualiza a descrição automaticamente
+      if (!agendaEditando && (name === "mes" || name === "ano")) {
+        novoEstado.descricao = gerarTextoDescricao(novoEstado.mes, novoEstado.ano);
+      }
+
+      return novoEstado;
+    });
   }
 
   async function handleSubmit(event) {
@@ -593,7 +625,7 @@ export default function AgendaMensalPage() {
                 minRows={3}
                 name="descricao"
                 label="Descrição"
-                placeholder="Ex.: Escala de agosto de 2026"
+                placeholder="Digite o Mês/Ano"
                 value={form.descricao}
                 onChange={handleChange}
                 inputProps={{ maxLength: 255 }}

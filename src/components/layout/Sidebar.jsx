@@ -68,9 +68,15 @@ export default function Sidebar() {
       icon: <EventNoteOutlined />,
       profiles: ["ADMIN", "LIDER"],
     },
-    {
-      label: "Músicas",
+      {
+      label: "Musicas",
       path: "/musicas",
+      icon: <LibraryMusicIcon />,
+      profiles: ["ADMIN", "LIDER"],
+    },  
+    {
+      label: "Playlist",
+      path: "/playlist",
       icon: <LibraryMusicIcon />,
       profiles: ["ADMIN", "LIDER"],
     },

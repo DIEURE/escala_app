@@ -40,10 +40,13 @@ import api from "../../../services/api";
 
 export default function ModalEditarEscala({ open, onClose, data, onSave }) {
   const [escalaData, setEscalaData] = useState({
-    culto: "",
+    nomeCultoManha: "",
+    nomeCultoNoite: "",
     dataEscala: null,
-    horario: "",
-    horarioFim: "",
+    horarioManha: "",
+    horarioManhaFim: "",
+    horarioNoite: "",
+    horarioNoiteFim: "",
     observacao: "",
   });
   const [musicosEscalados, setMusicosEscalados] = useState([]);
@@ -70,12 +73,12 @@ export default function ModalEditarEscala({ open, onClose, data, onSave }) {
     if (open && data) {
       setEscalaData({
         id: data.escala.id,
-        culto: data.escala.culto,
+        nomeCultoManha: data.escala.nomeCultoManha,
         dataEscala: data.escala.dataEscala
           ? dayjs(data.escala.dataEscala)
           : null,
-        horario: data.escala.horario?.substring(0, 5),
-        horarioFim: data.escala.horarioFim?.substring(0, 5),
+        horarioManha: data.escala.horarioManha?.substring(0, 5),
+        horarioNoite: data.escala.horarioNoite?.substring(0, 5),
         observacao: data.escala.observacao,
       });
       setMusicosEscalados(data.musicos || []);
@@ -87,10 +90,12 @@ export default function ModalEditarEscala({ open, onClose, data, onSave }) {
 
 const handleSalvar = async () => {
     const payload = {
-        culto: escalaData.culto,
+        nomeCultoManha: escalaData.nomeCultoManha,
         dataEscala: escalaData.dataEscala ? dayjs(escalaData.dataEscala).format("YYYY-MM-DD") : null,
-        horario: escalaData.horario.length === 5 ? escalaData.horario + ":00" : escalaData.horario,
-        horarioFim: escalaData.horarioFim?.length === 5 ? escalaData.horarioFim + ":00" : escalaData.horarioFim,
+        horarioManha: escalaData.horarioManha.length === 5 ? escalaData.horarioManha + ":00" : escalaData.horarioManha,
+        horarioManhaFim: escalaData.horarioManhaFim.length === 5 ? escalaData.horarioManhaFim + ":00" : escalaData.horarioManhaFim,
+        horarioFim: escalaData.horarioNoite?.length === 5 ? escalaData.horarioNoite + ":00" : escalaData.horarioNoiteFim,
+        horarioNoiteFim: escalaData.horarioNoiteFim?.length === 5 ? escalaData.horarioNoiteFim + ":00" : escalaData.horarioNoiteFim,
         observacao: escalaData.observacao,
         departamentoId: data.escala.departamentoId,
         agendaMensalId: data.escala.agendaMensalId,
@@ -110,10 +115,33 @@ const handleSalvar = async () => {
 };
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-      <DialogTitle>
-        Editar Escala:({escalaData.id})-Evento: {escalaData.culto} às{" "}
-        {escalaData.horario}
-      </DialogTitle>
+          <DialogTitle sx={{ pr: 6, position: 'relative' }}> 
+  {/* Renderiza de forma limpa apenas se os valores existirem */}
+  {escalaData.nomeCultoManha || escalaData.nomeCultoNoite ? (
+    <>
+      {escalaData.nomeCultoManha ? `${escalaData.nomeCultoManha.toUpperCase()} (${escalaData.horarioManha || ''})` : ''}
+      {escalaData.nomeCultoManha && escalaData.nomeCultoNoite ? ' / ' : ''}
+      {escalaData.nomeCultoNoite ? `${escalaData.nomeCultoNoite.toUpperCase()} (${escalaData.horarioNoite || ''})` : ''}
+    </>
+  ) : (
+    'Sem Culto Cadastrado' /* Texto alternativo se ambos forem nulos */
+  )}
+
+  {/* Data formatada com segurança */}
+  {escalaData.dataEscala && ` - ${new Date(escalaData.dataEscala).toLocaleDateString('pt-BR', {  
+    day: '2-digit', 
+    month: '2-digit', 
+    year: 'numeric',
+    timeZone: 'UTC'
+  })}`}
+
+  <IconButton 
+    onClick={onClose} 
+    sx={{ position: 'absolute', right: 8, top: 8 }}
+  >
+    <CloseIcon />
+  </IconButton> 
+</DialogTitle>
       <DialogContent dividers>
         <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="pt-br">
           {/* CABEÇALHO */}
@@ -139,9 +167,9 @@ const handleSalvar = async () => {
             <Grid item container spacing={1}>
               <TextField
                 label="Evento"
-                value={escalaData.culto}
+                value={escalaData.nomeCultoManha}
                 onChange={(e) =>
-                  setEscalaData({ ...escalaData, culto: e.target.value })
+                  setEscalaData({ ...escalaData, nomeCultoManha: e.target.value })
                 }
               />
               <TextField

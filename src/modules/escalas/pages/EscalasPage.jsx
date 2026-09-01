@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { MenuItem, Select, FormControl, InputLabel } from "@mui/material";
-import { styled } from '@mui/material/styles';
 import {
   Box,
   Button,
@@ -16,12 +15,15 @@ import {
   DialogTitle,
   DialogContent,
 } from "@mui/material";
-import TableCell, { tableCellClasses } from "@mui/material/TableCell";
+import TableCell from "@mui/material/TableCell";
 import PageHeader from "../../../components/common/PageHeader";
 import ModalEscalaManual from "../components/ModalEscalaManual";
 import ModalEscalaAutomatica from "../components/ModalEscalaAutomatica";
 import ModalDetalhesEscala from "../components/ModalDetalhesEscala";
-import ModalEditarEscala from "../components/ModalEditarEscala"; 
+import ModalEditarEscala from "../components/ModalEditarEscala";
+
+import api from "../../../services/api";  
+
 import {
   listarEscalas,
   buscarDetalhesEscala,
@@ -33,31 +35,31 @@ export default function EscalasPage() {
   const [loading, setLoading] = useState(true);
   const [escalaSelecionada, setEscalaSelecionada] = useState(null);
   const [filtroMes, setFiltroMes] = useState("TODOS");
+
   const escalasFiltradas = escalas.filter((e) => {
     if (filtroMes === "TODOS") return true;
-    const mesEscala = e.dataEscala.split("-")[1]; // Pega o mês (ex: '08')
+    const mesEscala = e.dataEscala?.split("-")[1];
     return mesEscala === filtroMes;
   });
 
   const handleMudarStatus = async (id, novoStatus) => {
     try {
-        await api.patch(`/escalas/${id}/status`, novoStatus, {
-            headers: { 'Content-Type': 'application/json' }
-        });
-        alert("Status atualizado com sucesso!");
-        // Chame sua função de recarregar a lista aqui
+      await api.patch(`/escalas/${id}/status`, novoStatus, {
+        headers: { "Content-Type": "application/json" },
+      });
+      alert("Status atualizado com sucesso!");
+      carregarEscalas(); // Recarrega a lista após mudar status
     } catch (error) {
-        console.error("Erro ao mudar status:", error);
+      console.error("Erro ao mudar status:", error);
     }
-};
+  };
 
   async function carregarEscalas() {
     try {
       setLoading(true);
       const data = await listarEscalas();
-      // Ordenação simples garantida
       const ordenadas = data.sort(
-        (a, b) => new Date(a.dataEscala) - new Date(b.dataEscala),
+        (a, b) => new Date(a.dataEscala) - new Date(b.dataEscala)
       );
       setEscalas(ordenadas);
     } catch (error) {
@@ -67,11 +69,16 @@ export default function EscalasPage() {
     }
   }
 
-  // Função para formatar data sem erro de fuso (-1 dia)
   const formatarData = (dataString) => {
     if (!dataString) return "";
     const [ano, mes, dia] = dataString.split("-");
     return `${dia}/${mes}/${ano}`;
+  };
+
+  // Formata a hora para exibir só HH:mm (remove os segundos)
+  const formatarHora = (hora) => {
+    if (!hora) return "—"; // Traço quando não tem (manhã opcional)
+    return hora.substring(0, 5); // "09:00:00" vira "09:00"
   };
 
   const handleAbrirDetalhes = async (escala) => {
@@ -93,7 +100,6 @@ export default function EscalasPage() {
             Nova Escala
           </Button>
         }
-         
       />
 
       {loading ? (
@@ -101,8 +107,8 @@ export default function EscalasPage() {
           <CircularProgress />
         </Box>
       ) : (
-        <TableContainer component={Paper} >
-          <Box sx={{ display: "flex", gap: 2, mb: 2, alignItems: "center" }}>
+        <TableContainer component={Paper}>
+          <Box sx={{ display: "flex", gap: 2, mb: 2, p: 2, alignItems: "center" }}>
             <FormControl sx={{ minWidth: 150 }}>
               <InputLabel>Filtrar por Mês</InputLabel>
               <Select
@@ -112,18 +118,8 @@ export default function EscalasPage() {
               >
                 <MenuItem value="TODOS">Todos os Meses</MenuItem>
                 {[
-                  "01",
-                  "02",
-                  "03",
-                  "04",
-                  "05",
-                  "06",
-                  "07",
-                  "08",
-                  "09",
-                  "10",
-                  "11",
-                  "12",
+                  "01", "02", "03", "04", "05", "06",
+                  "07", "08", "09", "10", "11", "12",
                 ].map((m) => (
                   <MenuItem key={m} value={m}>
                     Mês {m}
@@ -132,51 +128,52 @@ export default function EscalasPage() {
               </Select>
             </FormControl>
           </Box>
-           <Table sx={{ minWidth: 700 }} aria-label="customized table">
+
+          <Table sx={{ minWidth: 700 }} aria-label="customized table">
             <TableHead sx={{ backgroundColor: "#C9C9C9" }}>
               <TableRow>
-                <TableCell>
-                  <b>Data</b>
-                </TableCell>
-                <TableCell>
-                  <b>Hr.Início</b>
-                </TableCell>
-                <TableCell>
-                  <b>Hr.Fim</b>
-                </TableCell>
-                <TableCell>
-                  <b>Culto</b>
-                </TableCell>
-                <TableCell align="center">
-                  <b>Ações</b>
-                </TableCell>
+                <TableCell><b>Data</b></TableCell>
+                <TableCell><b>Culto Manhã</b></TableCell>
+                <TableCell><b>Horário Manhã</b></TableCell>
+                <TableCell><b>Culto Noite</b></TableCell>
+                <TableCell><b>Horário Noite</b></TableCell>
+                <TableCell align="center"><b>Ações</b></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {escalasFiltradas.map((escala) => (
-                <TableRow
-                  key={escala.id}
-                  hover
-                  sx={{
-                    // Se a escala não estiver ativa, deixa um fundo levemente amarelado ou vermelho
-                    backgroundColor: escala.ativa ? "inherit" : "#ffffff",
-                  }}
-                >
+                <TableRow key={escala.id} hover>
                   <TableCell>{formatarData(escala.dataEscala)}</TableCell>
-                  <TableCell>{escala.horario}</TableCell>
-                  <TableCell>{escala.horarioFim}</TableCell>
+
+                  {/* COLUNA CULTO MANHÃ */}
                   <TableCell>
-                    {escala.culto}
-                    {!escala.ativa && (
-                      <Typography
-                        variant="caption"
-                        color="error"
-                        sx={{ ml: 1 }}
-                      >
-                        (Pendente)
+                    {escala.nomeCultoManha ? (
+                      escala.nomeCultoManha
+                    ) : (
+                      <Typography variant="caption" color="text.disabled">
+                        — Sem culto matutino —
                       </Typography>
                     )}
                   </TableCell>
+
+                  {/* COLUNA HORÁRIO MANHÃ */}
+                  <TableCell>
+                    {escala.nomeCultoManha ? (
+                      `${formatarHora(escala.horarioManha)} às ${formatarHora(escala.horarioManhaFim)}`
+                    ) : (
+                      "—"
+                    )}
+                  </TableCell>
+
+                  {/* COLUNA CULTO NOITE */}
+                  <TableCell>{escala.nomeCultoNoite}</TableCell>
+
+                  {/* COLUNA HORÁRIO NOITE */}
+                  <TableCell>
+                    {`${formatarHora(escala.horarioNoite)} às ${formatarHora(escala.horarioNoiteFim)}`}
+                  </TableCell>
+
+                  {/* AÇÕES */}
                   <TableCell align="center">
                     <Button
                       variant="outlined"
@@ -193,7 +190,7 @@ export default function EscalasPage() {
         </TableContainer>
       )}
 
-      {/* Modais mantidos conforme sua estrutura anterior */}
+      {/* MODAL DE SELEÇÃO */}
       <Dialog
         open={modal === "SELECAO"}
         onClose={() => setModal(null)}
@@ -220,56 +217,40 @@ export default function EscalasPage() {
         </DialogContent>
       </Dialog>
 
-      {/* <ModalEscalaManual
-        open={modal === "MANUAL"}
-        onClose={() => setModal(null)}
-        onSave={carregarEscalas}
-      />
-      <ModalEscalaAutomatica
-        open={modal === "AUTOMATICA"}
-        onClose={() => setModal(null)}
-        onSave={carregarEscalas}
-      />
       <ModalDetalhesEscala
         open={modal === "DETALHES"}
         onClose={() => setModal(null)}
         data={escalaSelecionada}
-      /> */}
+        onEdit={() => setModal("EDITAR_FISCAL")}
+      />
 
+      <ModalEditarEscala
+        open={modal === "EDITAR_FISCAL"}
+        onClose={() => setModal(null)}
+        data={escalaSelecionada}
+        onSave={() => {
+          carregarEscalas();
+          setModal(null);
+        }}
+      />
 
+      <ModalEscalaAutomatica
+        open={modal === "AUTOMATICA"}
+        onClose={() => setModal(null)}
+        onSave={() => {
+          carregarEscalas();
+          setModal(null);
+        }}
+      />
 
-<ModalDetalhesEscala
-  open={modal === "DETALHES"}
-  onClose={() => setModal(null)}
-  data={escalaSelecionada}
-  onEdit={(data) => {
-    setModal("EDITAR_FISCAL"); // Novo estado para o modal nota fiscal
-  }}
-/>
-
-{/* O NOVO MODAL ESTILO NOTA FISCAL */}
-<ModalEditarEscala
-  open={modal === "EDITAR_FISCAL"}
-  onClose={() => setModal(null)}
-  data={escalaSelecionada} // Passa o objeto completo {escala, musicos}
-  onSave={() => {
-    carregarEscalas();
-    setModal(null);
-  }}
-/>
-
-<ModalEscalaAutomatica
-  open={modal === "AUTOMATICA"}
-  onClose={() => setModal(null)}
-  onSave={carregarEscalas}
-/>
-
-<ModalEscalaManual
-  open={modal === "MANUAL"}
-  onClose={() => setModal(null)}
-  onSave={carregarEscalas}
-/>
-
+      <ModalEscalaManual
+        open={modal === "MANUAL"}
+        onClose={() => setModal(null)}
+        onSave={() => {
+          carregarEscalas();
+          setModal(null);
+        }}
+      />
     </Box>
   );
 }

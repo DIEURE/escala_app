@@ -16,35 +16,43 @@ import {
   ListItem,
   ListItemButton,
   Divider,
+  Grid,
+  Typography,
 } from "@mui/material";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs from "dayjs";
 import "dayjs/locale/pt-br";
 import { useEffect, useState } from "react";
 import api from "../../../services/api";
 
-export default function ModalEscalaManual({ open, onClose, onSave, escalaParaEditar }) {
-  const [modoEdicao, setModoEdicao] = useState(false);
+export default function ModalEscalaManual({ open, onClose, onSave }) {
   const [etapa, setEtapa] = useState(1);
   const [escalaId, setEscalaId] = useState(null);
+  
   const [form, setForm] = useState({
     agendaMensalId: "",
     dataEscala: null,
     departamentoId: "",
-    culto: "",
-    horario: "",
-    horarioFim: "",
+    turno: "NOITE", // "MANHA", "NOITE", "AMBOS"
+    
+    nomeCultoManha: "",
+    horarioManha: "",
+    horarioManhaFim: "",
+    
+    nomeCultoNoite: "",
+    horarioNoite: "",
+    horarioNoiteFim: "",
+    
     observacao: "",
   });
+
   const [opcoes, setOpcoes] = useState({
     agendas: [],
     departamentos: [],
     musicos: [],
   });
+  
   const [musicosSelecionados, setMusicosSelecionados] = useState([]);
-  const [erroConflito, setErroConflito] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -55,102 +63,117 @@ export default function ModalEscalaManual({ open, onClose, onSave, escalaParaEdi
         agendaMensalId: "",
         dataEscala: null,
         departamentoId: "",
-        culto: "",
-        horario: "",
-        horarioFim: "",
+        turno: "NOITE",
+        nomeCultoManha: "",
+        horarioManha: "",
+        horarioManhaFim: "",
+        nomeCultoNoite: "",
+        horarioNoite: "",
+        horarioNoiteFim: "",
         observacao: "",
       });
 
       const carregar = async () => {
-        const [resAgendas, resDept] = await Promise.all([
-          api.get("/agenda-mensal"),
-          api.get("/departamentos"),
-        ]);
-        setOpcoes({
-          agendas: resAgendas.data,
-          departamentos: resDept.data,
-          musicos: [],
-        });
+        try {
+          const [resAgendas, resDept] = await Promise.all([
+            api.get("/agenda-mensal"),
+            api.get("/departamentos"),
+          ]);
+          setOpcoes({
+            agendas: Array.isArray(resAgendas.data) ? resAgendas.data : [],
+            departamentos: Array.isArray(resDept.data) ? resDept.data : [],
+            musicos: [],
+          });
+        } catch (err) {
+          console.error("Erro ao carregar dados:", err);
+        }
       };
       carregar();
     }
   }, [open]);
 
   useEffect(() => {
-    const checarConflito = async () => {
-      // Verifica se os campos existem e se a data é um objeto dayjs válido
-      const temData =
-        form.dataEscala && typeof form.dataEscala.format === "function";
-
-      if (temData && form.horario && form.departamentoId) {
-        try {
-          // Formata os dados exatamente como o backend espera
-          const params = {
-            data: form.dataEscala.format("YYYY-MM-DD"),
-            horario:
-              form.horario.length === 5 ? `${form.horario}:00` : form.horario,
-            departamentoId: form.departamentoId,
-          };
-
-          const res = await api.get(`/escalas/verificar-conflito`, { params });
-
-          console.log("Params enviados:", params);
-          console.log("Resposta do Backend (res.data):", res.data); // ADICIONE ESTE LOG
-
-          setErroConflito(res.data);
-        } catch (err) {
-          console.error("Erro na requisição de conflito:", err);
-        }
-      } else {
-        setErroConflito(false);
-      }
-    };
-
-    checarConflito();
-  }, [form.dataEscala, form.horario, form.departamentoId]);
-
-  useEffect(() => {
     if (form.departamentoId) {
       api
         .get(`/usuarios/departamento/${form.departamentoId}`)
-        .then((res) => setOpcoes((prev) => ({ ...prev, musicos: res.data })));
+        .then((res) => {
+          setOpcoes((prev) => ({
+            ...prev,
+            musicos: Array.isArray(res.data) ? res.data : [],
+          }));
+        })
+        .catch((err) => console.error("Erro ao carregar músicos", err));
     }
   }, [form.departamentoId]);
 
-  const handleSalvarDados = async () => {
+const handleSalvarDados = async () => {
+    // 1. Validações gerais básicas
+    if (!form.agendaMensalId) {
+      alert("Selecione a Agenda Mensal!");
+      return;
+    }
+    if (!form.dataEscala) {
+      alert("Selecione a Data da Escala!");
+      return;
+    }
+    if (!form.departamentoId) {
+      alert("Selecione o Departamento!");
+      return;
+    }
+
+    // 2. Validações específicas por Turno Escolhido
+    if (form.turno === "MANHA" || form.turno === "AMBOS") {
+      if (!form.nomeCultoManha || form.nomeCultoManha.trim() === "") {
+        alert("Preencha o Nome do Culto da Manhã!");
+        return;
+      }
+      if (!form.horarioManha) {
+        alert("Preencha o Horário de Início da Manhã!");
+        return;
+      }
+    }
+
+    if (form.turno === "NOITE" || form.turno === "AMBOS") {
+      if (!form.nomeCultoNoite || form.nomeCultoNoite.trim() === "") {
+        alert("Preencha o Nome do Culto da Noite!");
+        return;
+      }
+      if (!form.horarioNoite) {
+        alert("Preencha o Horário de Início da Noite!");
+        return;
+      }
+    }
+
+    const formatarTempo = (t) => (t ? (t.length === 5 ? `${t}:00` : t) : null);
+
     try {
       const payload = {
-        agendaMensalId: form.agendaMensalId,
+        agendaMensalId: Number(form.agendaMensalId),
         departamentoId: Number(form.departamentoId),
-        dataEscala: form.dataEscala
-          ? dayjs(form.dataEscala).format("YYYY-MM-DD")
-          : null,
+        dataEscala: dayjs(form.dataEscala).format("YYYY-MM-DD"),
         tipoEscala: "MANUAL",
-        horario:
-          form.horario.length === 5 ? `${form.horario}:00` : form.horario,
-        horarioFim: form.horarioFim
-          ? form.horarioFim.length === 5
-            ? `${form.horarioFim}:00`
-            : form.horarioFim
-          : null,
-        culto: form.culto,
         observacao: form.observacao || "",
+
+        // Noite (Envia se for NOITE ou AMBOS, senão null)
+        nomeCultoNoite: form.turno === "NOITE" || form.turno === "AMBOS" ? form.nomeCultoNoite : null,
+        horarioNoite: form.turno === "NOITE" || form.turno === "AMBOS" ? formatarTempo(form.horarioNoite) : null,
+        horarioNoiteFim: form.turno === "NOITE" || form.turno === "AMBOS" ? formatarTempo(form.horarioNoiteFim) : null,
+
+        // Manhã (Envia se for MANHA ou AMBOS, senão null)
+        nomeCultoManha: form.turno === "MANHA" || form.turno === "AMBOS" ? form.nomeCultoManha : null,
+        horarioManha: form.turno === "MANHA" || form.turno === "AMBOS" ? formatarTempo(form.horarioManha) : null,
+        horarioManhaFim: form.turno === "MANHA" || form.turno === "AMBOS" ? formatarTempo(form.horarioManhaFim) : null,
       };
 
       const res = await api.post("/escalas", payload);
       setEscalaId(res.data.id);
-      setEtapa(2); // Agora vai avançar!
+      setEtapa(2); // Avança para a escolha de músicos
     } catch (error) {
-      if (error.response?.status === 400) {
-        alert(
-          "Atenção: Já existe uma escala cadastrada para este horário e departamento.",
-        );
-      } else {
-        alert(
-          "Erro ao salvar: " +
-            (error.response?.data?.message || "Erro desconhecido"),
-        );
-      }
+      console.error("Erro ao salvar:", error);
+      alert(
+        "Erro ao salvar: " +
+          (error.response?.data?.message || "Erro desconhecido")
+      );
     }
   };
 
@@ -158,12 +181,13 @@ export default function ModalEscalaManual({ open, onClose, onSave, escalaParaEdi
     try {
       await api.post(
         `/escalas/${escalaId}/adicionar-musicos`,
-        musicosSelecionados,
+        musicosSelecionados
       );
       alert("Escala criada com sucesso!");
       onSave();
       onClose();
     } catch (error) {
+      console.error("Erro ao vincular músicos:", error);
       alert("Erro ao vincular músicos");
     }
   };
@@ -177,7 +201,7 @@ export default function ModalEscalaManual({ open, onClose, onSave, escalaParaEdi
 
   const getCount = (inst) =>
     musicosSelecionados.filter(
-      (id) => opcoes.musicos.find((m) => m.id === id)?.nomeInstrumento === inst,
+      (id) => opcoes.musicos.find((m) => m.id === id)?.nomeInstrumento === inst
     ).length;
 
   return (
@@ -194,6 +218,7 @@ export default function ModalEscalaManual({ open, onClose, onSave, escalaParaEdi
               <InputLabel>Agenda</InputLabel>
               <Select
                 value={form.agendaMensalId}
+                label="Agenda"
                 onChange={(e) =>
                   setForm({ ...form, agendaMensalId: e.target.value })
                 }
@@ -205,16 +230,19 @@ export default function ModalEscalaManual({ open, onClose, onSave, escalaParaEdi
                 ))}
               </Select>
             </FormControl>
+
             <DatePicker
-              label="Data"
+              label="Data da Escala"
               value={form.dataEscala}
               onChange={(v) => setForm({ ...form, dataEscala: v })}
               slotProps={{ textField: { fullWidth: true } }}
             />
+
             <FormControl fullWidth>
               <InputLabel>Departamento</InputLabel>
               <Select
                 value={form.departamentoId}
+                label="Departamento"
                 onChange={(e) =>
                   setForm({ ...form, departamentoId: e.target.value })
                 }
@@ -226,41 +254,112 @@ export default function ModalEscalaManual({ open, onClose, onSave, escalaParaEdi
                 ))}
               </Select>
             </FormControl>
+
+            <FormControl fullWidth>
+              <InputLabel>Turno da Escala</InputLabel>
+              <Select
+                value={form.turno}
+                label="Turno da Escala"
+                onChange={(e) => setForm({ ...form, turno: e.target.value })}
+              >
+                <MenuItem value="NOITE">Apenas Noite</MenuItem>
+                <MenuItem value="MANHA">Apenas Manhã</MenuItem>
+                <MenuItem value="AMBOS">Ambos (Manhã e Noite)</MenuItem>
+              </Select>
+            </FormControl>
+
             <TextField
-              label="Evento"
-              fullWidth
-              value={form.culto}
-              onChange={(e) => setForm({ ...form, culto: e.target.value })}
-            />
-            <TextField
-              label="Grupo"
+              label="Observação Geral"
               fullWidth
               value={form.observacao}
               onChange={(e) => setForm({ ...form, observacao: e.target.value })}
             />
-            <Stack direction="row" spacing={2}>
-              <TextField
-                label="Início"
-                type="time"
-                fullWidth
-                value={form.horario}
-                onChange={(e) => setForm({ ...form, horario: e.target.value })}
-              />
-              <TextField
-                label="Fim"
-                type="time"
-                fullWidth
-                value={form.horarioFim}
-                onChange={(e) =>
-                  setForm({ ...form, horarioFim: e.target.value })
-                }
-                InputLabelProps={{ shrink: true }}
-              />
-            </Stack>
-            {erroConflito && (
-              <div style={{ color: "red", fontWeight: "bold" }}>
-                ⚠️ Escala já existe para este horário!
-              </div>
+
+            <Divider />
+
+            {(form.turno === "MANHA" || form.turno === "AMBOS") && (
+              <>
+                <Typography variant="subtitle2" color="primary">
+                  Descrição do Evento (*Ensaio/Culto/Outros)
+                </Typography>
+                <TextField
+                  label="Digite aqui a descrição do evento"
+                  fullWidth
+                  value={form.nomeCultoManha}
+                  onChange={(e) =>
+                    setForm({ ...form, nomeCultoManha: e.target.value })
+                  }
+                />
+                <Grid container spacing={2}>
+                  <Grid item xs={6}>
+                    <TextField
+                      label="Início Manhã"
+                      type="time"
+                      InputLabelProps={{ shrink: true }}
+                      fullWidth
+                      value={form.horarioManha}
+                      onChange={(e) =>
+                        setForm({ ...form, horarioManha: e.target.value })
+                      }
+                    />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <TextField
+                      label="Fim Manhã"
+                      type="time"
+                      InputLabelProps={{ shrink: true }}
+                      fullWidth
+                      value={form.horarioManhaFim}
+                      onChange={(e) =>
+                        setForm({ ...form, horarioManhaFim: e.target.value })
+                      }
+                    />
+                  </Grid>
+                </Grid>
+                <Divider />
+              </>
+            )}
+
+            {(form.turno === "NOITE" || form.turno === "AMBOS") && (
+              <>
+                <Typography variant="subtitle2" color="primary">
+                  Dados do Culto Noturno
+                </Typography>
+                <TextField
+                  label="Nome Culto Noite"
+                  fullWidth
+                  value={form.nomeCultoNoite}
+                  onChange={(e) =>
+                    setForm({ ...form, nomeCultoNoite: e.target.value })
+                  }
+                />
+                <Grid container spacing={2}>
+                  <Grid item xs={6}>
+                    <TextField
+                      label="Início Noite"
+                      type="time"
+                      InputLabelProps={{ shrink: true }}
+                      fullWidth
+                      value={form.horarioNoite}
+                      onChange={(e) =>
+                        setForm({ ...form, horarioNoite: e.target.value })
+                      }
+                    />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <TextField
+                      label="Fim Noite"
+                      type="time"
+                      InputLabelProps={{ shrink: true }}
+                      fullWidth
+                      value={form.horarioNoiteFim}
+                      onChange={(e) =>
+                        setForm({ ...form, horarioNoiteFim: e.target.value })
+                      }
+                    />
+                  </Grid>
+                </Grid>
+              </>
             )}
           </Stack>
         ) : (
@@ -287,7 +386,7 @@ export default function ModalEscalaManual({ open, onClose, onSave, escalaParaEdi
                           setMusicosSelecionados((prev) =>
                             prev.includes(m.id)
                               ? prev.filter((i) => i !== m.id)
-                              : [...prev, m.id],
+                              : [...prev, m.id]
                           )
                         }
                       >
@@ -319,13 +418,10 @@ export default function ModalEscalaManual({ open, onClose, onSave, escalaParaEdi
         )}
         <Button
           variant="contained"
-          // O botão fica desabilitado se o erroConflito for true
-          disabled={erroConflito}
           onClick={etapa === 1 ? handleSalvarDados : handleFinalizar}
         >
           {etapa === 1 ? "Próximo" : "Finalizar Escala"}
         </Button>
-        
       </DialogActions>
     </Dialog>
   );

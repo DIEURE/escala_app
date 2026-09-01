@@ -13,13 +13,13 @@ export default function AdminLayout() {
         component="main"
         sx={{
           ml: { md: `${DRAWER_WIDTH}px` },
-          pt: '72px',
+          pt: '180px',
           minHeight: '100vh',
         }}
       >
         <Box
           sx={{
-            maxWidth: 1600,
+            maxWidth: 1900,
             mx: 'auto',
             p: { xs: 2, sm: 3, md: 4 },
           }}

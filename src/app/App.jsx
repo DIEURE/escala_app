@@ -15,8 +15,10 @@ import InstrumentosPage from '../modules/instrumentos/pages/InstrumentosPage';
 
 import AgendaMensalPage from '../modules/agenda-mensal/pages/AgendaMensalPage';
 import EscalasPage from '../modules/escalas/pages/EscalasPage';
+import PlaylistPage from '../modules/playlist/pages/PlaylistPage';
+import MusicasPage from '../modules/musicas/pages/MusicasPage';
 import MinhasEscalasPage from '../modules/escalas/pages/MinhasEscalasPage';
-import ConfiguracoesPage from '../modules/configuracoes/pages/ConfiguracoesPage';
+import PlaylistConfigPage from '../modules/configuracoes/playlist/pages/PlaylistConfigPage';
 
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -52,8 +54,11 @@ export default function App() {
             <Route path="/usuarios" element={<UsuariosPage />} />
             <Route path="/agenda-mensal" element={<AgendaMensalPage />} />
             <Route path="/escalas" element={<EscalasPage />} />
+            <Route path="/musicas" element={<MusicasPage />} />
+
+            <Route path="/playlist" element={<PlaylistPage />} />
             <Route path="/minhas-escalas" element={<MinhasEscalasPage />} />
-            <Route path="/configuracoes" element={<ConfiguracoesPage />} />
+            <Route path="/configuracoes" element={<PlaylistConfigPage />} />
           </Route>
         </Route>
 
