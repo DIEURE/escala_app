@@ -171,6 +171,26 @@ const handleSalvar = async () => {
     );
   });
 
+  // Carrega as músicas já salvas na escala quando o usuário a seleciona (modo edição)
+  useEffect(() => {
+    if (escalaSelecionadaId) {
+      const carregarMusicasSalvasDaEscala = async () => {
+        try {
+          const res = await api.get(`/escalas/${escalaSelecionadaId}/playlist-manual/musicas`);
+          // res.data deve retornar a lista de EscalaMusica ordenada. Extraímos apenas os IDs na ordem correta:
+          const idsSalvos = res.data.map((item) => item.id);
+          setSelecionadas(idsSalvos);
+        } catch (err) {
+          console.error("Erro ao carregar músicas salvas da escala", err);
+          setSelecionadas([]);
+        }
+      };
+      carregarMusicasSalvasDaEscala();
+    } else {
+      setSelecionadas([]);
+    }
+  }, [escalaSelecionadaId]);
+
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
       <DialogTitle
