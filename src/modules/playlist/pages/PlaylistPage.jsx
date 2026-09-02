@@ -1,47 +1,172 @@
-import { useState } from "react";
-import { Box, Button } from "@mui/material";
+import { useEffect, useState } from "react";
+import {
+  Box,
+  Button,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+  CircularProgress,
+  Link,
+  Chip,
+  Stack,
+} from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import PlayCircleIcon from "@mui/icons-material/PlayCircle";
 import PageHeader from "../../../components/common/PageHeader";
+import AdminLayout from "../../../components/layout/AdminLayout";
 import ModalSelecaoPlaylist from "../components/ModalSelecaoPlaylist";
 import ModalPlaylistManual from "../components/ModalPlaylistManual";
-import ModalPlaylistEscala from "../components/ModalPlaylistEscala"; // O do YouTube via API que fizemos antes
+import ModalPlaylistEscala from "../components/ModalPlaylistEscala";
+import { listarEscalas } from "../../../services/escalaService";
 
 export default function PlaylistPage() {
-  const [modal, setModal] = useState("SELECAO"); // Inicia abrindo a seleção ou pode ser null para abrir por botão
+  const [modal, setModal] = useState(null); // "SELECAO" | "MANUAL" | "YOUTUBE" | null
+  const [escalas, setEscalas] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Carrega as escalas que possuem playlist gerada
+  const carregarEscalasComPlaylist = async () => {
+    try {
+      setLoading(true);
+      const data = await listarEscalas();
+      // Filtra apenas escalas que possuem youtubePlaylistUrl (manual ou automática)
+      const comPlaylist = data.filter((e) => e.youtubePlaylistUrl);
+      setEscalas(comPlaylist.sort((a, b) => new Date(b.dataEscala) - new Date(a.dataEscala)));
+    } catch (error) {
+      console.error("Erro ao carregar playlists:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    carregarEscalasComPlaylist();
+  }, []);
+
+  const formatarData = (dataString) => {
+    if (!dataString) return "";
+    const [ano, mes, dia] = dataString.split("-");
+    return `${dia}/${mes}/${ano}`;
+  };
+
+  const handleSelectTipo = (tipo) => {
+    if (tipo === "MANUAL") setModal("MANUAL");
+    if (tipo === "YOUTUBE") setModal("YOUTUBE");
+  };
 
   return (
-    <Box>
-      <PageHeader 
-        title="Gerenciador de Playlists" 
-        action={
-          <Button variant="contained" onClick={() => setModal("SELECAO")}>
-            Nova Playlist
-          </Button>
-        }
-      />
+     
+      <Box>
+        <PageHeader
+          title="Gerenciador de Playlists"
+          description="Visualize e crie playlists para os cultos e eventos."
+          action={
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setModal("SELECAO")}
+            >
+              Nova Playlist
+            </Button>
+          }
+        />
 
+        {/* TABELA DE PLAYLISTS CRIADAS */}
+        {loading ? (
+          <Box sx={{ display: "flex", justifyContent: "center", mt: 6 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <TableContainer component={Paper} sx={{ boxShadow: 1, border: "1px solid #e0e0e0" }}>
+            <Table>
+              <TableHead sx={{ backgroundColor: "#f5f5f5" }}>
+                <TableRow>
+                  <TableCell><b>Data</b></TableCell>
+                  <TableCell><b>Departamento</b></TableCell>
+                  <TableCell><b>Culto x Evento</b></TableCell>
+                  <TableCell><b>Link da Playlist</b></TableCell>
+                  <TableCell align="center"><b>Ações</b></TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {escalas.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                      <Typography color="text.secondary">
+                        Nenhuma playlist gerada até o momento. Clique em "Nova Playlist" acima.
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  escalas.map((escala) => (
+                    <TableRow key={escala.id} hover>
+                      <TableCell>{formatarData(escala.dataEscala)}</TableCell>
+                      <TableCell>
+                        <Chip label={escala.nomeDepartamento || "—"} size="small" variant="outlined" />
+                      </TableCell>
+                      <TableCell>{escala.culto || escala.nomeCultoNoite || "Culto"}</TableCell>
+                      <TableCell sx={{ maxWidth: 300 }}>
+                        <Link
+                          href={escala.youtubePlaylistUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          sx={{ wordBreak: "break-all", fontSize: "0.85rem" }}
+                        >
+                          {escala.youtubePlaylistUrl}
+                        </Link>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          color="error"
+                          startIcon={<PlayCircleIcon />}
+                          href={escala.youtubePlaylistUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Ouvir
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
 
-      {/* Modal 1: Escolha o Tipo */}
-      <ModalSelecaoPlaylist
-        open={modal === "SELECAO"}
-        onClose={() => setModal(null)}
-        onSelectTipo={(tipo) => {
-          if (tipo === "MANUAL") setModal("MANUAL");
-          if (tipo === "YOUTUBE") setModal("YOUTUBE");
-        }}
-      />
+        {/* MODAL 1: Escolha o Tipo (Manual ou YouTube) */}
+        <ModalSelecaoPlaylist
+          open={modal === "SELECAO"}
+          onClose={() => setModal(null)}
+          onSelectTipo={handleSelectTipo}
+        />
 
-      {/* Modal 2: Playlist Manual */}
-      <ModalPlaylistManual
-        open={modal === "MANUAL"}
-        onClose={() => setModal(null)}
-        onSave={() => setModal(null)}
-      />
+        {/* MODAL 2: Playlist Manual (Escolher músicas e reordenar) */}
+        <ModalPlaylistManual
+          open={modal === "MANUAL"}
+          onClose={() => setModal(null)}
+          onSave={() => {
+            setModal(null);
+            carregarEscalasComPlaylist(); // Atualiza a tabela ao salvar
+          }}
+        />
 
-      {/* Modal 3: Playlist Automática via YouTube API */}
-      <ModalPlaylistEscala
-        open={modal === "YOUTUBE"}
-        onClose={() => setModal(null)}
-      />
-    </Box>
+        {/* MODAL 3: Playlist Automática via YouTube API */}
+        <ModalPlaylistEscala
+          open={modal === "YOUTUBE"}
+          onClose={() => {
+            setModal(null);
+            carregarEscalasComPlaylist(); // Atualiza a tabela ao fechar/gerar
+          }}
+        />
+      </Box>
+     
   );
 }

@@ -21,34 +21,38 @@ import {
   MenuItem,
   CircularProgress,
   Link,
+  IconButton,
+  Grid,
+  Paper, // <--- ADICIONE ESTA LINHA AQUI
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { useEffect, useState } from "react";
 import api from "../../../services/api";
 import { listarEscalas } from "../../../services/escalaService";
 
 export default function ModalPlaylistManual({ open, onClose, onSave }) {
-  // Escalas
   const [escalas, setEscalas] = useState([]);
   const [escalaSelecionadaId, setEscalaSelecionadaId] = useState("");
   const [loadingEscalas, setLoadingEscalas] = useState(false);
 
-  // Músicas
   const [musicas, setMusicas] = useState([]);
-  const [selecionadas, setSelecionadas] = useState([]); // IDs na ordem de clique
+  const [selecionadas, setSelecionadas] = useState([]); // Array de IDs na ordem
   const [busca, setBusca] = useState("");
 
-  // Controle
   const [salvando, setSalvando] = useState(false);
   const [playlistUrl, setPlaylistUrl] = useState("");
+  const [avisoDuplicada, setAvisoDuplicada] = useState("");
 
-  // Carrega escalas e músicas quando o modal abre
   useEffect(() => {
     if (open) {
       setEscalaSelecionadaId("");
       setSelecionadas([]);
       setBusca("");
       setPlaylistUrl("");
+      setAvisoDuplicada("");
       carregarEscalas();
       carregarMusicas();
     }
@@ -58,10 +62,7 @@ export default function ModalPlaylistManual({ open, onClose, onSave }) {
     try {
       setLoadingEscalas(true);
       const data = await listarEscalas();
-      const ordenadas = data.sort(
-        (a, b) => new Date(a.dataEscala) - new Date(b.dataEscala)
-      );
-      setEscalas(ordenadas);
+      setEscalas(data.sort((a, b) => new Date(a.dataEscala) - new Date(b.dataEscala)));
     } catch (error) {
       console.error("Erro ao listar escalas:", error);
     } finally {
@@ -78,20 +79,63 @@ export default function ModalPlaylistManual({ open, onClose, onSave }) {
     }
   };
 
-  // Formata data AAAA-MM-DD -> DD/MM/AAAA
   const formatarData = (dataString) => {
     if (!dataString) return "";
     const [ano, mes, dia] = dataString.split("-");
     return `${dia}/${mes}/${ano}`;
   };
 
-  const toggleMusica = (id) => {
-    setSelecionadas((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
+  // 3️⃣ Validação de Link / Música Duplicada
+  const toggleMusica = (musica) => {
+    setAvisoDuplicada("");
+    
+    // Verifica se a música já está selecionada
+    if (selecionadas.includes(musica.id)) {
+      setSelecionadas((prev) => prev.filter((i) => i !== musica.id));
+      return;
+    }
+
+    // Validação de link duplicado (mesmo youtubeVideoId já na lista)
+    if (musica.youtubeVideoId) {
+      const jaTemMesmoVideo = selecionadas.some((idSelecionado) => {
+        const m = musicas.find((item) => item.id === idSelecionado);
+        return m && m.youtubeVideoId === musica.youtubeVideoId;
+      });
+
+      if (jaTemMesmoVideo) {
+        setAvisoDuplicada(`⚠️ A música "${musica.nome}" (ou o mesmo vídeo do YouTube) já foi adicionada!`);
+        return;
+      }
+    }
+
+    setSelecionadas((prev) => [...prev, musica.id]);
   };
 
-  const handleSalvar = async () => {
+  // 1️⃣ Reordenar (Mover para cima)
+  const moverParaCima = (index) => {
+    if (index === 0) return;
+    const novaLista = [...selecionadas];
+    const temp = novaLista[index];
+    novaLista[index] = novaLista[index - 1];
+    novaLista[index - 1] = temp;
+    setSelecionadas(novaLista);
+  };
+
+  // 1️⃣ Reordenar (Mover para baixo)
+  const moverParaBaixo = (index) => {
+    if (index === selecionadas.length - 1) return;
+    const novaLista = [...selecionadas];
+    const temp = novaLista[index];
+    novaLista[index] = novaLista[index + 1];
+    novaLista[index + 1] = temp;
+    setSelecionadas(novaLista);
+  };
+
+  const removerSelecionada = (id) => {
+    setSelecionadas((prev) => prev.filter((i) => i !== id));
+  };
+
+const handleSalvar = async () => {
     if (!escalaSelecionadaId) {
       alert("Selecione uma escala primeiro!");
       return;
@@ -103,11 +147,13 @@ export default function ModalPlaylistManual({ open, onClose, onSave }) {
     try {
       setSalvando(true);
       setPlaylistUrl("");
+      
       const res = await api.post(
         `/escalas/${escalaSelecionadaId}/playlist-manual`,
-        selecionadas
+        selecionadas // 👈 Mantém enviando o array direto como estava
       );
-      setPlaylistUrl(res.data); // a URL gerada
+      
+      setPlaylistUrl(res.data);
       if (onSave) onSave(res.data);
     } catch (error) {
       console.error("Erro ao salvar playlist:", error);
@@ -117,12 +163,6 @@ export default function ModalPlaylistManual({ open, onClose, onSave }) {
     }
   };
 
-  const handleCopiarLink = () => {
-    navigator.clipboard.writeText(playlistUrl);
-    alert("Link copiado para a área de transferência!");
-  };
-
-  // Filtra músicas pela busca (nome ou cantor)
   const musicasFiltradas = musicas.filter((m) => {
     const termo = busca.toLowerCase();
     return (
@@ -132,11 +172,11 @@ export default function ModalPlaylistManual({ open, onClose, onSave }) {
   });
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
       <DialogTitle
         sx={{ backgroundColor: "primary.main", color: "primary.contrastText" }}
       >
-        Montar Playlist Manual
+        Montar Playlist Manual com Reordenação
       </DialogTitle>
       <DialogContent>
         {/* SELETOR DE ESCALA */}
@@ -156,12 +196,8 @@ export default function ModalPlaylistManual({ open, onClose, onSave }) {
                 {escalas.map((escala) => {
                   const dataFormatada = formatarData(escala.dataEscala);
                   const cultos = [
-                    escala.nomeCultoManha
-                      ? `Manhã: ${escala.nomeCultoManha}`
-                      : null,
-                    escala.nomeCultoNoite
-                      ? `Noite: ${escala.nomeCultoNoite}`
-                      : null,
+                    escala.nomeCultoManha ? `Manhã: ${escala.nomeCultoManha}` : null,
+                    escala.nomeCultoNoite ? `Noite: ${escala.nomeCultoNoite}` : null,
                   ]
                     .filter(Boolean)
                     .join(" | ");
@@ -179,134 +215,120 @@ export default function ModalPlaylistManual({ open, onClose, onSave }) {
 
         <Divider sx={{ mb: 2 }} />
 
-        {/* SÓ MOSTRA AS MÚSICAS APÓS ESCOLHER A ESCALA */}
         {escalaSelecionadaId ? (
-          <>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              Clique nas músicas na ordem que deseja tocá-las. O número indica a
-              posição na playlist.
-            </Typography>
-
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Buscar por nome ou cantor..."
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              sx={{ mb: 1 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
-              }}
-            />
-
-            <List sx={{ maxHeight: 320, overflow: "auto" }}>
-              {musicasFiltradas.length === 0 ? (
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ textAlign: "center", py: 2 }}
-                >
-                  Nenhuma música encontrada.
+          <Grid container spacing={3}>
+            {/* COLUNA DA ESQUERDA: LISTA DE MÚSICAS CADASTRADAS */}
+            <Grid item mt={12} mb={6}>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: "bold" }}>
+                Catálogo de Músicas
+              </Typography>
+              <TextField
+                fullWidth
+                size="small"
+                placeholder="Buscar música ou cantor..."
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                sx={{ mb: 1 }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              {avisoDuplicada && (
+                <Typography variant="caption" color="error" sx={{ display: "block", mb: 1, fontWeight: "bold" }}>
+                  {avisoDuplicada}
                 </Typography>
-              ) : (
-                musicasFiltradas.map((m) => {
-                  const posicao = selecionadas.indexOf(m.id);
-                  const estaSelecionada = posicao !== -1;
+              )}
+              <List sx={{ maxHeight: 300, overflow: "auto", border: "1px solid #e0e0e0", borderRadius: 1 }}>
+                {musicasFiltradas.map((m) => {
+                  const estaSelecionada = selecionadas.includes(m.id);
                   return (
                     <ListItem key={m.id} disablePadding>
-                      <ListItemButton onClick={() => toggleMusica(m.id)}>
+                      <ListItemButton onClick={() => toggleMusica(m)}>
                         <Checkbox checked={estaSelecionada} />
-                        {estaSelecionada && (
-                          <Chip
-                            label={posicao + 1}
-                            color="primary"
-                            size="small"
-                            sx={{ mr: 1, minWidth: 32 }}
-                          />
-                        )}
                         <ListItemText
                           primary={m.nome}
-                          secondary={
-                            <Box component="span">
-                              {m.cantor || "—"} • Tom: {m.tom || "—"}
-                              {!m.youtubeVideoId && (
-                                <Chip
-                                  label="Sem vídeo YouTube"
-                                  color="warning"
-                                  size="small"
-                                  sx={{ ml: 1, height: 18, fontSize: 10 }}
-                                />
-                              )}
-                            </Box>
-                          }
+                          secondary={`${m.cantor || "—"} • Tom: ${m.tom || "—"}`}
                         />
                       </ListItemButton>
                     </ListItem>
                   );
-                })
-              )}
-            </List>
-          </>
+                })}
+              </List>
+            </Grid>
+
+            {/* COLUNA DA DIREITA: MÚSICAS SELECIONADAS E ORDENADAS */}
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: "bold" }}>
+                Ordem da Playlist ({selecionadas.length})
+              </Typography>
+              <Paper variant="outlined" sx={{ maxHeight: 345, overflow: "auto", p: 1, bgcolor: "#fafafa" }}>
+                {selecionadas.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 6 }}>
+                    Nenhuma música selecionada ainda. Clique nas músicas ao lado.
+                  </Typography>
+                ) : (
+                  <List dense>
+                    {selecionadas.map((id, index) => {
+                      const m = musicas.find((item) => item.id === id);
+                      if (!m) return null;
+                      return (
+                        <ListItem
+                          key={id}
+                          sx={{ bgcolor: "white", mb: 1, border: "1px solid #ddd", borderRadius: 1 }}
+                          secondaryAction={
+                            <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
+                              <IconButton size="small" onClick={() => moverParaCima(index)} disabled={index === 0}>
+                                <ArrowUpwardIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton size="small" onClick={() => moverParaBaixo(index)} disabled={index === selecionadas.length - 1}>
+                                <ArrowDownwardIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton size="small" color="error" onClick={() => removerSelecionada(id)}>
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          }
+                        >
+                          <Chip label={index + 1} color="primary" size="small" sx={{ mr: 1, fontWeight: 'bold' }} />
+                          <ListItemText primary={m.nome} secondary={m.cantor} />
+                        </ListItem>
+                      );
+                    })}
+                  </List>
+                )}
+              </Paper>
+            </Grid>
+          </Grid>
         ) : (
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ textAlign: "center", py: 3 }}
-          >
-            Selecione uma escala acima para escolher as músicas.
+          <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center", py: 3 }}>
+            Selecione uma escala acima para montar a playlist.
           </Typography>
         )}
 
-        {/* RESULTADO: LINK GERADO */}
-        {playlistUrl && (
-          <Box
-            sx={{
-              mt: 2,
-              p: 2,
-              border: "1px solid #ddd",
-              borderRadius: 2,
-              backgroundColor: "#f9f9f9",
-              textAlign: "center",
-            }}
-          >
-            <Typography variant="subtitle2" gutterBottom>
-              Playlist Gerada com Sucesso! 🎉
-            </Typography>
-            <Link
-              href={playlistUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              sx={{ wordBreak: "break-all", display: "block", mb: 2 }}
-            >
-              {playlistUrl}
-            </Link>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={handleCopiarLink}
-              fullWidth
-            >
-              Copiar Link
-            </Button>
-          </Box>
-        )}
+       {playlistUrl && (
+           <Box sx={{ mt: 3, p: 2, border: "1px solid #ddd", borderRadius: 2, backgroundColor: "#f9f9f9", textAlign: "center" }}>
+             <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 0.5 }}>
+               🎵 Playlist: {escalaSelecionadaId ? (() => {
+                 const esc = escalas.find(e => e.id === Number(escalaSelecionadaId));
+                 const culto = esc?.nomeCultoNoite || esc?.nomeCultoManha || "Culto";
+                 return `Culto ${culto} - ${esc ? formatarData(esc.dataEscala) : ''}`;
+               })() : ''}
+             </Typography>
+             <Typography variant="subtitle2" gutterBottom>Gerada com Sucesso! 🎉</Typography>
+             <Link href={playlistUrl} target="_blank" rel="noopener noreferrer" sx={{ wordBreak: "break-all", display: "block", mb: 1 }}>
+               {playlistUrl}
+             </Link>
+           </Box>
+         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={salvando}>
-          Fechar
-        </Button>
-        <Button
-          variant="contained"
-          onClick={handleSalvar}
-          disabled={!escalaSelecionadaId || selecionadas.length === 0 || salvando}
-        >
-          {salvando
-            ? "Gerando..."
-            : `Gerar Playlist (${selecionadas.length})`}
+        <Button onClick={onClose} disabled={salvando}>Fechar</Button>
+        <Button variant="contained" onClick={handleSalvar} disabled={!escalaSelecionadaId || selecionadas.length === 0 || salvando}>
+          {salvando ? "Gerando..." : `Salvar e Gerar YouTube (${selecionadas.length})`}
         </Button>
       </DialogActions>
     </Dialog>

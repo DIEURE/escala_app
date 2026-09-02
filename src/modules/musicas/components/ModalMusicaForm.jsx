@@ -184,8 +184,8 @@ export default function ModalMusicaForm({ open, onClose, onSave, musica }) {
 
           <TextField
             label="Cifra / Letra (opcional)"
-            value={form.cifraTexto}
-            onChange={handleChange("cifraTexto")}
+            value={form.cifra}
+            onChange={handleChange("cifra")}
             fullWidth
             multiline
             rows={4}

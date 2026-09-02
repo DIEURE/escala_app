@@ -118,6 +118,7 @@ export default function MusicasPage() {
                 <TableCell sx={{ color: "#fff" }}>Cantor</TableCell>
                 <TableCell sx={{ color: "#fff" }}>Tom</TableCell>
                 <TableCell sx={{ color: "#fff" }}>BPM</TableCell>
+                <TableCell sx={{ color: "#fff" }}>Cifra</TableCell>
                 <TableCell sx={{ color: "#fff" }} align="center">
                   YouTube
                 </TableCell>
@@ -140,6 +141,7 @@ export default function MusicasPage() {
                     <TableCell>{m.cantor || "—"}</TableCell>
                     <TableCell>{m.tom || "—"}</TableCell>
                     <TableCell>{m.bpm || "—"}</TableCell>
+                    <TableCell>{m.cifraurl || "—"}</TableCell>
                     <TableCell align="center">
                       {m.youtubeVideoId ? (
                         <Tooltip title="Abrir no YouTube">

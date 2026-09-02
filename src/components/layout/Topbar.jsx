@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAppTheme } from '../../contexts/ThemeContext';
 import { DRAWER_WIDTH } from './Sidebar';
+import logomarca from '../../assets/logomarca.png';
 
 export default function Topbar() {
   const navigate = useNavigate();
@@ -48,16 +49,35 @@ export default function Topbar() {
         zIndex: 1100,
       }}
     >
-      <Box>
-        <Typography variant="body2" color="text.secondary">
-          Bem-vindo de volta,
-        </Typography>
+      {/* LADO ESQUERDO: LOGO + TEXTO DE BOAS-VINDAS */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        {/* LOGOMARCA RESPONSIVA */}
+        <Box
+          component="img"
+          src={logomarca}
+          alt="Logomarca"
+          sx={{
+            height: {
+              xs: '32px',   // Menor no celular para não empurrar os elementos
+              sm: '40px',   
+              md: '45px',   // Tamanho ideal para caber nos 72px de altura da barra
+            },
+            width: 'auto',
+          }}
+        />
 
-        <Typography variant="subtitle1" fontWeight={700}>
-          {firstName}
-        </Typography>
+        {/* TEXTO DE BOAS-VINDAS (Oculto em telas muito pequenas para dar espaço à logo) */}
+        <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.2 }}>
+            Bem-vindo de volta,
+          </Typography>
+          <Typography variant="subtitle1" fontWeight={700} sx={{ lineHeight: 1.2 }}>
+            {firstName}
+          </Typography>
+        </Box>
       </Box>
 
+      {/* LADO DIREITO: BOTÕES DE AÇÃO */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <Tooltip title="Alternar tema">
           <IconButton onClick={toggleTheme}>

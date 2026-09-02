@@ -1,4 +1,4 @@
-import {
+ import {
   Dialog,
   DialogTitle,
   DialogContent,
@@ -21,7 +21,9 @@ export default function ModalSelecaoPlaylist({ open, onClose, onSelectTipo }) {
             variant="outlined"
             size="large"
             sx={{ mb: 2, py: 1.5 }}
-            onClick={() => onSelectTipo("MANUAL")}
+            onClick={() => {
+              if (onSelectTipo) onSelectTipo("MANUAL");
+            }}
           >
             🎵 PLAYLIST MANUAL
             <br />
@@ -32,7 +34,9 @@ export default function ModalSelecaoPlaylist({ open, onClose, onSelectTipo }) {
             variant="contained"
             size="large"
             sx={{ py: 1.5 }}
-            onClick={() => onSelectTipo("YOUTUBE")}
+            onClick={() => {
+              if (onSelectTipo) onSelectTipo("YOUTUBE");
+            }}
           >
             ▶️ PLAYLIST YOUTUBE
             <br />
@@ -42,4 +46,4 @@ export default function ModalSelecaoPlaylist({ open, onClose, onSelectTipo }) {
       </DialogContent>
     </Dialog>
   );
-}
+}  
