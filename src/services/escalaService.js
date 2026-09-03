@@ -68,3 +68,15 @@ export const buscarDadosIniciais = async () => {
     ]);
     return { agendas: agendas.data, departamentos: departamentos.data };
 };
+
+// Buscar músicas de uma playlist manual existente (Modo Edição)
+export const listarMusicasDaPlaylistManual = async (id) => {
+  try {
+    // Apontando para o endpoint correto do seu backend:
+    const response = await api.get(`/escala-musicas/escala/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Erro ao buscar músicas da playlist da escala ${id}:`, error);
+    throw error;
+  }
+};

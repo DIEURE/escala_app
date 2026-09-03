@@ -12,7 +12,7 @@ export default function ModalSelecaoPlaylist({ open, onClose, onSelectTipo }) {
       <DialogTitle
         sx={{ backgroundColor: "primary.main", color: "primary.contrastText" }}
       >
-        Como gerar a playlist?
+        Montando a PlayList YouTube?
       </DialogTitle>
       <DialogContent>
         <Box sx={{ mt: 2 }}>
@@ -25,11 +25,10 @@ export default function ModalSelecaoPlaylist({ open, onClose, onSelectTipo }) {
               if (onSelectTipo) onSelectTipo("MANUAL");
             }}
           >
-            🎵 PLAYLIST MANUAL
-            <br />
-            <small>(Escolher músicas cadastradas)</small>
+            🎵 MONTAR PLAYLIST
+             
           </Button>
-          <Button
+         {/*  <Button
             fullWidth
             variant="contained"
             size="large"
@@ -41,7 +40,7 @@ export default function ModalSelecaoPlaylist({ open, onClose, onSelectTipo }) {
             ▶️ PLAYLIST YOUTUBE
             <br />
             <small>(Gerar automática)</small>
-          </Button>
+          </Button> */}
         </Box>
       </DialogContent>
     </Dialog>

@@ -18,7 +18,7 @@ import EscalasPage from '../modules/escalas/pages/EscalasPage';
 import PlaylistPage from '../modules/playlist/pages/PlaylistPage';
 import MusicasPage from '../modules/musicas/pages/MusicasPage';
 import MinhasEscalasPage from '../modules/escalas/pages/MinhasEscalasPage';
-import PlaylistConfigPage from '../modules/configuracoes/playlist/pages/PlaylistConfigPage';
+import YoutubeConfigPage from '../modules/configuracoes/playlist/pages/YoutubeConfigPage';
 import PlaylistsSalvasPage from '../modules/playlist/pages/PlaylistsSalvasPage';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -58,7 +58,7 @@ export default function App() {
             <Route path="/playlist" element={<PlaylistPage />} />
             <Route path="/playlists-salvas" element={<PlaylistsSalvasPage />} />
             <Route path="/minhas-escalas" element={<MinhasEscalasPage />} />
-            <Route path="/configuracoes" element={<PlaylistConfigPage />} />
+            <Route path="/configuracoes" element={<YoutubeConfigPage />} />
           </Route>
         </Route>
 
