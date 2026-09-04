@@ -50,13 +50,13 @@ export default function Sidebar() {
     },
 
     {
-      label: "Usuários",
+      label: "Perfil",
       path: "/usuarios",
       icon: <GroupOutlined />,
       profiles: ["ADMIN", "LIDER"],
     },
         {
-      label: "Agenda Mensal",
+      label: "Agenda",
       path: "/agenda-mensal",
       icon: <CalendarMonthOutlinedIcon />,
       profiles: ["ADMIN", "LIDER"],
@@ -72,10 +72,10 @@ export default function Sidebar() {
       label: "Musicas",
       path: "/musicas",
       icon: <LibraryMusicIcon />,
-      profiles: ["ADMIN", "LIDER"],
+      profiles: ["ADMIN", "LIDER","MUSICO"],
     },  
     {
-      label: "Playlist",
+      label: "Repertório",
       path: "/playlist",
       icon: <LibraryMusicIcon />,
       profiles: ["ADMIN", "LIDER"],
